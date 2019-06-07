@@ -1,0 +1,539 @@
+%{
+	#include <stdio.h>
+	#include <string>
+	#include "output.hpp"
+	#include "parser.hpp"
+	#include "utilFuncs.hpp"
+	#include "symbolTable.hpp"
+	#include "codeGenerator.hpp"
+	
+	using namespace output;
+	
+	extern int yylex();
+	extern int yylineno;
+	SymbolTable* sym = new SymbolTable();
+	codeGenerator* cg = new codeGenerator();
+	vector<string> start_loop;
+	vector<string> start_while_statement;
+	vector<string> start_if_statement;
+	vector<string> start_else;
+	vector<int> end_statment_jump;
+	
+	
+	int yyerror(const string message);
+	
+%}
+
+%token VOID	
+%token INT		
+%token BYTE	
+%token B		
+%token BOOL	
+%token STRUCT				
+%token RETURN	
+%token IF		
+%token WHILE	
+%token BREAK	
+%token CONTINUE
+%token SC		
+%token COMMA	
+%token PERIOD	
+%token TRUE	
+%token FALSE
+%token <str>ID		
+%token <val>NUM		
+%token <str>STRING	
+
+%type<exp> Exp Call
+%type<exp> Type RetType
+%type<exp_list> ExpList
+%type<formalDec> FormalDecl
+%type<mem_struct> StructMem
+%type<struct_list> StructMemList
+%type<struct_type> StructType
+%type<formalDec_list> FormalsList Formals
+%type<jump> BREAKS CONTINUES
+%type<state> Statement Statements BLOCK If_Select If_Temp
+
+%nonassoc NO_ELSE
+%nonassoc ELSE	
+%right ASSIGN		
+%left OR
+%left AND		
+%left <op>EQUALITY
+%nonassoc <op>RELATIONAL
+%left <op>ADDITIVE
+%left <op>MULT
+%right NOT
+%left LPAREN RPAREN	LBRACE RBRACE
+
+
+%%
+
+Program:	Structs {cg->addPrints();} Funcs									{if(!sym->findMainFunction()){errorMainMissing();return 0;} /*sym->printTable();*/ cg->addMyMain(sym); cg->printDataBuffer(); cg->printCodeBuffer();}
+
+Funcs:		/*epsilon*/ 
+			| FuncDecl Funcs
+		
+FuncDecl:	 RetType ID {if(*$2 == "main"){cg->emit("my_main:");}else{cg->emit(*$2+":");} cg->push(ra); cg->move(fp,sp);} LPAREN Formals RPAREN LBRACE {if(!sym->addFunction(*$2, typeToString($1.exp_type), 0)){errorDef(yylineno,*$2); return 0;} sym->addArgsToFunction($5); sym->newScope(); sym->addFunctionArgsToScope($5);} Statements RBRACE {cg->calle(); sym->closeScope();}
+
+Structs: 	/*epsilon*/
+			| StructsDecl Structs
+			
+StructsDecl: STRUCT ID {if(!sym->addEntry(*$2,"STRUCT",0)){errorDef(yylineno,*$2); return 0;}} LBRACE StructMemList RBRACE SC		{sym->addVarsToStruct($5);}
+
+RetType: 	Type 		{$$.exp_type = $1.exp_type;}
+			| VOID		{$$.exp_type = VOID_TYPE;}
+
+Formals: 	/*epsilon*/										{$$ = new vector<FormalDec*>();}
+			| FormalsList									{$$ = $1;}
+
+FormalsList:	FormalDecl									{$$ = new vector<FormalDec*>();FormalDec* dec = copyDec(&$1); $$->push_back(dec);}
+				| FormalDecl COMMA FormalsList				{	
+																if(isInlist($3,&($1)))
+																{
+																	errorDef(yylineno,*($1.id));
+																	delete($1.id);
+																	return 0;
+																}
+																FormalDec* dec = copyDec(&$1); $3->push_back(dec); $$=$3;
+															}
+
+FormalDecl:		Type ID										{
+																if(sym->isInTable(*$2))
+																{
+																	errorDef(yylineno,*$2);
+																	delete($2);
+																	return 0;
+																}
+																$$.type = $1.exp_type;
+																$$.id = new string(*$2); 
+																$$.struct_type = NULL;
+															}
+				| StructType ID								{
+																if(sym->isInTable(*$2))
+																{
+																	errorDef(yylineno,*$2);
+																	delete($2);
+																	return 0;
+																}
+																if(!sym->isStructDefined(*($1.struct_id)))
+																{
+																	errorUndefStruct(yylineno,*($1.struct_id));
+																	delete($2);
+																	return 0;
+																}
+																$$.type = STRUCT_TYPE; $$.id = new string(*$2);
+																$$.struct_type = new string(*($1.struct_id));
+															}
+				
+StructMemList:	StructMem									{$$ = new vector<MemStruct*>(); MemStruct* mem = copyMemStruct(&$1); $$->push_back(mem);}
+				| StructMemList StructMem					{
+																if(isInlist($1,&($2)))
+																{
+																	errorDef(yylineno,*($2.id));
+																	delete($2.id);
+																	return 0;
+																}
+																MemStruct* mem = copyMemStruct(&$2);
+																$1->push_back(mem);
+																$$=$1;
+																delete($2.id);
+															}
+				
+StructMem:		Type ID SC									{$$.type = $1.exp_type; $$.id = new string(*$2); delete($2);}
+
+Statements:		Statement									{$$.Slist = $1.Slist; $$.Elist = $1.Elist;}
+				| Statements Statement						{$$.Slist = vectorMerge($1.Slist,$2.Slist); $$.Elist = vectorMerge($1.Elist,$2.Elist);}
+
+Statement:		Non_If_Statment								{$$.Slist = new vector<int>(); $$.Elist = new vector<int>();}			
+				| If_Select									{$$.Slist = $1.Slist; $$.Elist = $1.Elist;}
+				| BREAKS									{$$.Slist = new vector<int>(); $$.Elist = new vector<int>(); $$.Elist->push_back($1.address);}
+				| CONTINUES									{$$.Slist = new vector<int>(); $$.Elist = new vector<int>(); $$.Slist->push_back($1.address);}
+				| BLOCK										{$$.Slist = $1.Slist; $$.Elist = $1.Elist;}
+				
+If_Select:		IF LPAREN Exp {if($3.exp_type != BOOL_TYPE){errorMismatch(yylineno); exit(0);}}	RPAREN {sym->newScope(); start_if_statement.push_back(cg->genLabel());} If_Temp	{
+																																		string if_done = cg->genLabel();
+																																		cg->bpatch(*($3.Tlist), start_if_statement.back());
+																																		start_if_statement.pop_back();
+																																		cg->bpatch(*($3.Flist), start_else.back());
+																																		start_else.pop_back();
+																																		vector<int> temp;
+																																		temp.push_back(end_statment_jump.back());
+																																		end_statment_jump.pop_back();
+																																		cg->bpatch(temp,if_done);
+																																		
+																																		$$.Slist = $7.Slist; 
+																																		$$.Elist = $7.Elist;
+																																	}
+
+If_Temp:		Statement %prec NO_ELSE										   																			{
+																																							end_statment_jump.push_back(cg->emit("j "));
+																																							start_else.push_back(cg->genLabel());
+																																							$$.Slist = $1.Slist;
+																																							$$.Elist = $1.Elist;
+																																							sym->closeScope();
+																																						}
+				| Statement ELSE  {end_statment_jump.push_back(cg->emit("j ")); start_else.push_back(cg->genLabel()); sym->closeScope(); sym->newScope();} Statement 		{
+																																							$$.Slist = vectorMerge($1.Slist,$4.Slist); 
+																																							$$.Elist = vectorMerge($1.Elist,$4.Elist);
+																																							sym->closeScope();
+																																						}
+
+BLOCK:			LBRACE {sym->newScope();} Statements RBRACE							{$$.Slist = $3.Slist; $$.Elist = $3.Elist; sym->closeScope();}	
+				
+Non_If_Statment: 					
+				Type ID SC                                    							{
+																							if(!sym->addEntry(*$2,typeToString($1.exp_type),1))
+																							{
+																								errorDef(yylineno, *$2); return 0;
+																							}
+																							cg->subI(sp, 4);
+																						}
+				| StructType ID SC                              						{
+																							if(!sym->isStructDefined(*($1.struct_id)))
+																							{
+																								errorUndefStruct(yylineno,*($1.struct_id));
+																								return 0;
+																							}
+																							if(!sym->addEntry(*$2,"struct "+*$1.struct_id,sym->getStatmentStructSize(*$1.struct_id)))
+																							{
+																								errorDef(yylineno,*$2); 
+																								return 0;
+																							}
+																							cg->subI(sp,sym->getStatmentStructSize(*($1.struct_id)) * 4);
+																						}
+				| STRUCT ID {if(!sym->addEntry(*$2,"STRUCT",0)){errorDef(yylineno, *$2); return 0;}} LBRACE StructMemList RBRACE SC 								{sym->addVarsToStruct($5);}
+				| Type ID {cg->subI(sp,4);} ASSIGN Exp SC                         						{
+																							if(!checkTypeAssign(typeToString($1.exp_type), $5))
+																							{
+																								errorMismatch(yylineno); return 0;
+																							} 
+																							if(!sym->addEntry(*$2,typeToString($1.exp_type),1))
+																							{
+																							
+																								errorDef(yylineno,*$2); return 0;
+																							}	
+																							if($1.exp_type == INT_TYPE || $1.exp_type == BYTE_TYPE)
+																							{
+																								sym->getEntry(*$2)->val = $5.value;
+																							}
+																							if($1.exp_type == BOOL_TYPE)
+																							{
+																								cg->boolAssignment($5,*$2,"",sym);
+																							}
+																							else
+																							{
+																								cg->updateVarInStack(*$2,$5.reg,sym);
+																								cg->freeReg($5.reg);
+																							}
+																						}
+				| StructType ID ASSIGN Exp SC                   						{
+																							if(!sym->isStructDefined(*($1.struct_id)))
+																							{
+																								errorUndefStruct(yylineno,*($1.struct_id));
+																							} 
+																							
+																							if(!checkTypeAssign("struct "+*$1.struct_id,$4))
+																							{
+																								errorMismatch(yylineno); return 0;
+																							}
+																							
+																							if(!sym->addEntry(*$2,"struct "+*$1.struct_id,sym->getStructSize(*$1.struct_id)))
+																							{
+																								errorDef(yylineno, *$2); return 0;
+																							}
+																							cg->structsDefAssignment(*($1.struct_id), *($4.structVarName), $4.reg, sym);
+																							cg->freeReg($4.reg);
+																						}
+				| ID ASSIGN Exp SC                              						{
+																							Entry* e = sym->getEntry(*$1);
+																							if(dynamic_cast<Function*>(e) != NULL)
+																							{
+																								errorUndef(yylineno, *$1); exit(0);
+																							}
+																							if(!checkTypeAssign(sym->getIdType(*$1,yylineno), $3))
+																							{
+																								errorMismatch(yylineno); exit(0);
+																							}
+																							if(sym->getIdType(*$1,yylineno) == "INT" || sym->getIdType(*$1,yylineno) == "BYTE")
+																							{
+																								sym->getEntry(*$1)->val = $3.value;
+																							}
+																							
+																							if($3.exp_type == STRUCT_ID_TYPE)
+																							{
+																								cg->structAssignment(*$1,*($3.structVarName),$3.reg,sym);
+																							}
+																							else
+																							{
+																								if(stringToType(sym->getIdType(*$1,yylineno)) == BOOL_TYPE)
+																								{
+																									cg->boolAssignment($3,*$1,"",sym);
+																								}
+																								else
+																								{
+																									cg->updateVarInStack(*$1, $3.reg, sym);																							
+																								}
+																							}
+																							cg->freeReg($3.reg);
+																						}
+				| ID PERIOD ID ASSIGN Exp SC                    						{
+																							if(!(checkTypeAssign(sym->checkStructField(*$1,*$3,yylineno),$5)))
+																							{
+																								errorMismatch(yylineno);
+																								exit(0);
+																							}
+																							if(stringToType(sym->checkStructField(*$1,*$3,yylineno)) == BYTE_TYPE)
+																							{
+																								//cg->maskByte($5.reg);
+																							}
+																							if(stringToType(sym->checkStructField(*$1,*$3,yylineno)) == BOOL_TYPE)
+																							{
+																								cg->boolAssignment($5,*$1,*$3,sym);
+																							}
+																							else
+																							{
+																								cg->updateStructMemberInStack(*$1, *$3, $5.reg, sym);																							
+																							}
+																							cg->freeReg($5.reg);
+																						}
+				| Call SC                                       						{;}
+				| RETURN SC                                     						{if(!sym->checkRetVal("VOID")){errorMismatch(yylineno); exit(0);} cg->calle();}
+				| RETURN Exp SC                                 						{
+																							if(!sym->checkRetVal(typeToString($2.exp_type)))
+																							{errorMismatch(yylineno); exit(0);}
+																							if($2.exp_type == BOOL_TYPE)
+																							{
+																								cg->boolReturn($2);
+																							}
+																							else
+																							{
+																								cg->move(v0,$2.reg);
+																							} 
+																							cg->freeReg($2.reg);
+																							cg->calle();
+																						}
+				| WHILE {start_loop.push_back(cg->genLabel());} LPAREN Exp RPAREN {if($4.exp_type != BOOL_TYPE){errorMismatch(yylineno); exit(0);} sym->enteredLoop(); sym->newScope(); start_while_statement.push_back(cg->genLabel());} Statement {
+																																																								cg->emit("j " + start_loop.back());
+																																																								string end_loop = cg->genLabel();
+																																																								cg->bpatch(*($7.Elist),end_loop);
+																																																								cg->bpatch(*($7.Slist),start_loop.back());
+																																																								start_loop.pop_back();
+																																																								cg->bpatch(*($4.Tlist), start_while_statement.back());
+																																																								start_while_statement.pop_back();
+																																																								cg->bpatch(*($4.Flist), end_loop);
+																																																								sym->closeScope(); 
+																																																								sym->exitLoop();
+																																																							}
+BREAKS:			BREAK SC                                   							{if(!sym->isInLoop()){errorUnexpectedBreak(yylineno); exit(0);} $$.address = cg->emit("j ");}
+CONTINUES:		CONTINUE SC				                    						{if(!sym->isInLoop()){errorUnexpectedContinue(yylineno); exit(0);} $$.address = cg->emit("j ");}
+
+Call: 			ID LPAREN ExpList RPAREN	{	
+												//vector<string>* temp = parseExpList($3);
+												Function* func= (sym->getFunction(*$1,yylineno));
+												bool res = compareVectorTypes(func->arg_types,$3);
+												if(!res)
+												{
+													errorPrototypeMismatch(yylineno,*$1,*(func->arg_types));
+													return 0;
+												}
+												$$.exp_type = stringToType(func->type);
+												$$.reg = cg->caller(*$1,$3,sym);
+												cg->freeListReg($3);
+											}
+				| ID LPAREN RPAREN			{ 
+												vector<ExpClass*>* temp = new vector<ExpClass*>();
+												Function* func= (sym->getFunction(*$1,yylineno));
+												bool res = compareVectorTypes(func->arg_types,temp);
+												if(!res)
+												{
+													errorPrototypeMismatch(yylineno,*$1,*(func->arg_types));
+													return 0;
+												}
+												$$.exp_type = stringToType(func->type);
+												$$.reg = cg->caller(*$1,temp,sym);
+												delete(temp);
+											}
+				
+ExpList:		Exp						{
+											if($1.exp_type == BOOL_TYPE)
+											{
+												vector<int> temp;
+												int reg = cg->allocateReg();
+												string Tlabel = cg->genLabel();
+												cg->li(reg,1);
+												temp.push_back(cg->emit("j "));
+												string Flabel = cg->genLabel();
+												cg->li(reg,0);
+												string done = cg->genLabel();
+												cg->push(reg);
+												cg->bpatch(temp,done);
+												cg->bpatch(*($1.Tlist),Tlabel);
+												cg->bpatch(*($1.Flist),Flabel);
+												$1.reg = reg;
+											}
+											$$ = new vector<ExpClass*>();
+											ExpClass* exp = copyExpClass(&$1);
+											$$->push_back(exp);
+										}
+				| Exp COMMA {
+								if($1.exp_type == BOOL_TYPE)
+								{
+									vector<int> temp;
+									int reg = cg->allocateReg();
+									string Tlabel = cg->genLabel();
+									cg->li(reg,1);
+									temp.push_back(cg->emit("j "));
+									string Flabel = cg->genLabel();
+									cg->li(reg,0);
+									string done = cg->genLabel();
+									cg->push(reg);
+									cg->bpatch(temp,done);
+									cg->bpatch(*($1.Tlist),Tlabel);
+									cg->bpatch(*($1.Flist),Flabel);
+									$1.reg = reg;
+								}
+							} ExpList		{ExpClass* exp = copyExpClass(&$1); $4->push_back(exp); $$=$4;}
+				
+Type:			INT 					{$$.exp_type = INT_TYPE;}
+				| BYTE 					{$$.exp_type = BYTE_TYPE;}
+				| BOOL					{$$.exp_type = BOOL_TYPE;}
+
+StructType:		STRUCT ID				{$$.struct_id = new string(*$2);}
+
+Exp:			LPAREN Exp RPAREN		{$$ = $2;}
+				| ID					{ 
+											$$.exp_type = stringToType(sym->getIdType(*$1,yylineno));
+											if($$.exp_type == STRUCT_ID_TYPE)
+											{
+												$$.id = new string(sym->getIdType(*$1,yylineno));
+												$$.structVarName = new string(*$1);
+											}
+											else
+											{
+												$$.id = new string(*$1);
+											}
+											if($$.exp_type == BOOL_TYPE)
+											{
+												cg->getBoolVar(&$$,cg->getVarOffset(*$1,sym));	
+											}
+											else
+											{
+												$$.reg = cg->getVar(*$1, sym);
+												delete($1);
+											}
+										}
+				| ID PERIOD ID			{	
+											$$.exp_type = stringToType(sym->checkStructField(*$1,*$3,yylineno));
+											if($$.exp_type == BOOL_TYPE)
+											{
+												cg->getBoolVar(&$$,cg->getStructMemberOffset(*$1,*$3,sym));	
+											}
+											else
+											{
+												$$.reg = cg->getStructMember(*$1,*$3,sym);
+											}
+											delete($1);
+											delete($3);
+										}
+				| Call					{
+											$$.exp_type = $1.exp_type;
+											if($1.exp_type == BOOL_TYPE)
+											{
+												cg->boolCallToExp(&$$);
+											}
+											else
+											{
+												$$.reg = cg->allocateReg();
+												cg->move($$.reg,v0);
+											}											
+										}
+				| NUM					{$$.exp_type = INT_TYPE; $$.reg = cg->newExpReg($1);}	
+				| NUM B					{if($1 > 255){char* str = (char*)malloc((log10($1)+1)*sizeof(char)); sprintf(str,"%d", $1); output::errorByteTooLarge(yylineno, string(str)); return 0;}; $$.exp_type = BYTE_TYPE; $$.reg = cg->newExpReg($1);}	
+				| STRING				{$$.exp_type = STRING_TYPE; $$.reg = cg->allocateReg(); cg->stringToData(*$1,$$.reg);}	
+				| TRUE					{$$.exp_type = BOOL_TYPE; $$.value = 1; cg->boolLiteral(&$$,1);}	
+				| FALSE					{$$.exp_type = BOOL_TYPE; $$.value = 0; cg->boolLiteral(&$$,0);}					
+				| NOT Exp				{	if(typeCheck($2.exp_type, BOOL_TYPE))
+											{
+												$$.exp_type = BOOL_TYPE;
+												$$.Tlist = $2.Flist;
+												$$.Flist = $2.Tlist;
+											}
+											else
+											{
+												errorMismatch(yylineno);
+												exit(0);
+											}										
+										}	
+				| Exp AND {if($1.Tlist == NULL) {errorMismatch(yylineno); exit(0);} cg->bpatch(*($1.Tlist), cg->genLabel());} Exp			{	if(typeCheck($1.exp_type, $4.exp_type, BOOL_TYPE))
+																																				{
+																																					$$.exp_type = BOOL_TYPE;
+																																					cg->AND(&$$, &$1, &$4);
+																																				}
+																																				else
+																																				{
+																																					errorMismatch(yylineno);
+																																					exit(0);
+																																				}
+																																			}	
+										
+				| Exp OR {if($1.Flist == NULL) {errorMismatch(yylineno); exit(0);} cg->bpatch(*($1.Flist), cg->genLabel());} Exp			{	if(typeCheck($1.exp_type, $4.exp_type, BOOL_TYPE))
+																																				{
+																																					$$.exp_type = BOOL_TYPE;
+																																					cg->OR(&$$, &$1, &$4);
+																																				}
+																																				else
+																																				{
+																																					errorMismatch(yylineno);
+																																					exit(0);
+																																				}
+																				}
+										
+				| Exp RELATIONAL Exp	{
+											if(typeCheck($1.exp_type, $3.exp_type))
+											{
+												$$.exp_type = BOOL_TYPE;
+												cg->relop(&$$,&$1,&$3,$2);
+											}	
+											else
+											{
+												errorMismatch(yylineno);
+												exit(0);
+											}
+										}
+										
+				| Exp EQUALITY Exp		{	if(typeCheck($1.exp_type, $3.exp_type))
+											{	
+												$$.exp_type = BOOL_TYPE;
+												cg->relop(&$$,&$1,&$3,$2);
+											}
+											else
+											{
+												errorMismatch(yylineno);
+												exit(0);
+											}
+										}
+										
+				| Exp MULT Exp			{$$ = cg->binopExp($1,$3,$2,yylineno); delete($2);}
+										
+				| Exp ADDITIVE Exp		{$$ = cg->binopExp($1,$3,$2,yylineno); delete($2);}
+
+%%
+
+int main()
+{
+	yyparse();
+	delete sym;
+	return 0;
+}
+
+
+int yyerror(const string message)
+{
+	errorSyn(yylineno);
+	exit(0);
+}
+
+
+
