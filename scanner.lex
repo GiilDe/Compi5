@@ -7,19 +7,10 @@
 #include "parser.tab.hpp"
 #include <sstream>
 
-using namespace output;
 
 static void error(char * c_name) {
   printf("Error %s\n", c_name);
   exit(0);
-}
-
-int string_to_int2(string str){
-    stringstream s;
-    int n;
-    s << str;
-    s >> n;
-    return n;
 }
 
 %}
@@ -68,7 +59,10 @@ continue                        return CONTINUE;
 \{                              return LBRACE;
 \}                              return RBRACE;
 =                               return ASSIGN;
-==|!=|<|>|<=|>=                 return RELOP;
+==|!=|<|>|<=|>=                 {
+                                    yylval = new Binop(yytext);
+                                    return RELOP;
+                                }
 \+|\-|\*|\/                     {
                                     yylval = new Binop(yytext);
                                     return BINOP;
@@ -78,8 +72,11 @@ continue                        return CONTINUE;
                                     return ID;
                                 }
 0|[1-9][0-9]*                   {
-                                    int num = string_to_int2(yytext);
-                                    yylval = new Num(num);
+                                    stringstream s;
+                                    int n;
+                                    s << yytext;
+                                    s >> n;
+                                    yylval = new Num(n);
                                     return NUM;
                                 }
 \"([^\n\r\"\\]|\\[rnt"\\])+\"   {
@@ -91,7 +88,7 @@ continue                        return CONTINUE;
 {ws}                            ;
 <<EOF>> {return EF;}
 
-.                               errorLex(yylineno);
+.                               output::errorLex(yylineno);
 
 %%
 

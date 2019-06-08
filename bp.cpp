@@ -24,6 +24,7 @@ string CodeBuffer::genLabel(){
 
 int CodeBuffer::emit(const string &s){
     buffer.push_back(s);
+    //cout << s << endl;
 	return buffer.size() - 1;
 }
 

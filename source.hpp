@@ -16,11 +16,21 @@ public:
     virtual ~stack_data(){};
 };
 
+class Label : public stack_data{
+public:
+    string label;
+    explicit Label(string label) : label(label){}
+};
 
 class Binop : public stack_data{
 public:
     string op;
     Binop(const string& op) : op(op) {}
+};
+
+class while_start : public stack_data{
+public:
+    vector<stack_data*> v;
 };
 
 class Num : public stack_data{
@@ -31,12 +41,18 @@ public:
 
 class Type : public stack_data {
 public:
+    bool bool_exp;
     int type;
     string reg;
-    explicit Type(int type) : type(type), reg(){}
-    Type(int type, string reg) : type(type), reg(reg){}
-    Type(Type& t) : type(t.type), reg(t.reg){}
-    Type() : type(0), reg("") {}
+    vector<int> true_list;
+    vector<int> false_list;
+    vector<int> exit_list;
+
+    explicit Type(int type) : type(type), reg(), bool_exp(false) {}
+    Type(int type, string reg) : type(type), reg(reg), bool_exp(false){}
+    Type(Type& t) : type(t.type), reg(t.reg), bool_exp(false){}
+    Type() : type(0), reg(""), bool_exp(false) {}
+
 };
 
 class Id : public stack_data {
@@ -57,15 +73,6 @@ class Preconditions : public stack_data{
 public:
     int preconditions_num;
     Preconditions(int num) : preconditions_num(num){}
-};
-
-class PrecondList : public stack_data{
-public:
-    vector<int> preconditions_nums;
-    PrecondList(int num){
-        preconditions_nums.push_back(num);
-    }
-    PrecondList() : preconditions_nums(){}
 };
 
 

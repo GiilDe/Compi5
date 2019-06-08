@@ -1,0 +1,12 @@
+
+int main(){
+    int x = 2;
+    int z = 5;
+    if(z > x){
+        int y = 2;
+    }
+    else{
+        int y = 3;
+    }
+    return 0;
+}

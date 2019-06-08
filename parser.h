@@ -252,6 +252,8 @@ pair<int, int> getVariable(stack_data* stackData){
     return pair<int, int>(-1, -1);
 }
 
+
+
 tokens getVariableType(stack_data* stackData) {
     Id* varId = dynamic_cast<Id*>(stackData);
 
@@ -453,37 +455,33 @@ bool from_memory(string s){
     return s.size() > 1 && s.at(1) != 's' && s.at(1) != 't' && !is_number(s);
 }
 
-void lw(string reg, string src)
+void lw(string reg /*dest*/, string src)
 {
     string s = "lw " + reg + ", " + src;
-    //code_buffer->emit(s);
-    cout << s << endl;
+    code_buffer->emit(s);
 }
 
 void sw(string reg, string dest)
 {
     string s = "sw " + reg + ", " + dest;
-    //code_buffer->emit(s);
-    cout << s << endl;
+    code_buffer->emit(s);
 }
 
 void li(string dest, int num)
 {
     string s = "li " + dest + ", " + int_to_string(num);
-    //code_buffer->emit(s);
-    cout << s << endl;
+    code_buffer->emit(s);
 }
 
 void li(string dest, string num)
 {
     string s = "li " + dest + ", " + num;
-    //code_buffer->emit(s);
-    cout << s << endl;
+    code_buffer->emit(s);
 }
 
 void move_data(string dest, string src){
     string real_src = src;
-    //dest is memory expression, check source
+    //dest is in memory, check source
     if(from_memory(src)){
         real_src = get_free_register();
         lw(real_src, src);
@@ -524,13 +522,13 @@ void binop(Type* dest, Type* Rsrc, Type* src, string op){
     else if(op == "*"){
         op = "mul";
     }
-    else if(op == "\\"){
-        op = "mul";
+    else{
+        op = "div";
     }
 
     string s = op + " " + sdest + ", " + sRsrc + ", " + ssrc;
-    //code_buffer->emit(s);
-    cout << s << endl;
+    code_buffer->emit(s);
+    //cout << s << endl;
 
     if(sdest != dest->reg){
         sw(sdest, dest->reg);
@@ -543,6 +541,26 @@ void binop(Type* dest, Type* Rsrc, Type* src, string op){
     }
 }
 
+string get_reg_if_mem(Type* t){
+    if(from_memory(t->reg)){
+        string reg = get_free_register();
+        lw(reg, t->reg);
+        return reg;
+    }
+    return t->reg;
+}
+
+void bool_assignment(string dest, Type* t){
+    string T = code_buffer->genLabel();
+    move_data(dest, "1");
+    int skip_F_jump = code_buffer->emit("j ");
+    string F = code_buffer->genLabel();
+    move_data(dest, "0");
+    string after_F = code_buffer->genLabel();
+    code_buffer->bpatch(code_buffer->makelist(skip_F_jump), after_F);
+    code_buffer->bpatch(t->true_list, T);
+    code_buffer->bpatch(t->false_list, F);
+}
 
 void initialize_free_registers(){
     for (int i = 0; i <= 7; ++i) {
@@ -580,9 +598,7 @@ int main(){
 //    yydebug = 1;
 //#endif
 
-    int res = yyparse();
-    code_buffer->printCodeBuffer();
-    return res;
+    return yyparse();
 }
 
 #endif //HW3_PARSER_H
