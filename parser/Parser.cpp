@@ -112,6 +112,13 @@ bool Parser::addVariable(stack_data *varType, stack_data *varId, bool isFunction
     return true;
 }
 
+void Parser::tryAddVariable(stack_data *typeData, stack_data *idData, bool isFunctionParameter) {
+    if (!addVariable(typeData, idData, isFunctionParameter)) {
+        Id *id = dynamic_cast<Id *>(idData);
+        WRAP_ERROR(errorDef(yylineno, id->id));
+    }
+}
+
 pair<int, int> Parser::getVariable(stack_data* stackData){
     Id* varId = dynamic_cast<Id*>(stackData);
 

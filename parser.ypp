@@ -43,13 +43,13 @@ Funcs	:	/*epsilon*/
 	    ;
 
 
-FuncDecl	:	RetType ID LPAREN {parser.newScope();} Formals RPAREN PreConditions LBRACE {
+FuncDecl	:	RetType ID LPAREN {parser.newScope();} Formals RPAREN PreConditions LBRACE
+            {
                 parser.setCurrentReturnType($1);
                 parser.addFunctionDeclaration($1, $2, $5);
-            } Statements RBRACE
-            {
-                parser.exitScope(true, $2, $7);
             }
+            Statements RBRACE
+            { parser.exitScope(true, $2, $7); }
 	        ;
 
 RetType	:	Type
@@ -89,17 +89,17 @@ FormalsList	:	FormalDecl
 
 FormalDecl	:	Type ID
             {
-                tryAddVariable($1, $2, true);
+                parser.tryAddVariable($1, $2, true);
                 $$ = new Type(static_cast<Type*>($1)->type);
 	        }
             ;
 
 PreConditions	:	/*epsilon*/
-                {$$ = new Preconditions(0);}
+                { $$ = new Preconditions(0); }
 				|	PreConditions PreCondition
 				{
-				 int num = static_cast<Preconditions*>($1)->preconditions_num;
-				 $$ = new Preconditions(num + 1);
+				    int num = static_cast<Preconditions*>($1)->preconditions_num;
+				    $$ = new Preconditions(num + 1);
 				}
 	            ;
 
@@ -145,6 +145,7 @@ Open_statement: If_Start M Simple_statement
 
               | While_Start Open_statement
                 {
+                    parser.outWhile();
                     parser.exitScope(false, NULL, NULL);
                     while_start* ws = dynamic_cast<while_start*>($1);
                     string exp_evaluation_label = dynamic_cast<Label*>(ws->v[0])->label;
@@ -159,15 +160,16 @@ Open_statement: If_Start M Simple_statement
 
 Closed_statement: Simple_statement
                 | If_Else Closed_statement
-                  {
+                {
                     Type *t = dynamic_cast<Type*>($1);
                     string exit_label = code_buffer->genLabel();
                     code_buffer->bpatch(t->exit_list, exit_label);
                     parser.exitScope(false, NULL, NULL);
-                  }
+                }
 
                 | While_Start M Closed_statement
-                  {
+                {
+                    parser.outWhile();
                     parser.exitScope(false, NULL, NULL);
                     while_start* ws = dynamic_cast<while_start*>($1);
                     string exp_evaluation_label = dynamic_cast<Label*>(ws->v[0])->label;
@@ -177,26 +179,27 @@ Closed_statement: Simple_statement
                     code_buffer->emit("j " + exp_evaluation_label);
                     string after_while = code_buffer->genLabel();
                     code_buffer->bpatch(exp->false_list, after_while);
-                  }
+                }
                 ;
 
 While_Start: WHILE { parser.inWhile(); } LPAREN M Exp RPAREN
 {
     parser.verifyType($5, BOOL);
     parser.newScope();
-    $$ = new while_start();
-    while_start* ws = dynamic_cast<while_start*>($$);
+    while_start* ws = new while_start();
     ws->v.push_back($4);
     ws->v.push_back($5);
+    $$ = ws;
 }
 
 If_Start: IF LPAREN Exp RPAREN
 {
-    parser.verifyType($3, BOOL); parser.newScope();
+    parser.verifyType($3, BOOL);
+    parser.newScope();
     $$ = $3;
 }
 
-If_Else: If_Start M Closed_statement N {parser.exitScope(false, NULL, NULL);} ELSE {parser.newScope();} M
+If_Else: If_Start M Closed_statement N {parser.exitScope(false, NULL, NULL);} ELSE { parser.newScope(); } M
 {
     string label_true = dynamic_cast<Label*>($2)->label;
     string label_false = dynamic_cast<Label*>($8)->label;
@@ -210,58 +213,41 @@ If_Else: If_Start M Closed_statement N {parser.exitScope(false, NULL, NULL);} EL
     t->exit_list.push_back(exit_address);
 }
 
-
-
-Simple_statement:  LBRACE {parser.newScope();} Statements RBRACE
-                  {
-                   parser.exitScope(false, NULL, NULL);
-                  }
+Simple_statement:  LBRACE { parser.newScope(); } Statements RBRACE
+                { parser.exitScope(false, NULL, NULL); }
 
                 | Type ID SC
-                  {tryAddVariable($1, $2, false);}
+                { parser.tryAddVariable($1, $2, false); }
 
                 | Type ID ASSIGN Exp SC
-                  {
-                    Type *t = dynamic_cast<Type*>($4);
-                    parser.verifyType($1, t->type);
-                    tryAddVariable($1, $2, false);
-                    get_ID_reg($2);
-                    Id* id = static_cast<Id*>($2);
-                    string dest = id->type.reg;
+                {
+                    Type* expType = dynamic_cast<Type*>($4);
                     Type *t1 = dynamic_cast<Type*>($1);
-                    if(static_cast<tokens>(t1->type) != BOOL){
-                        move_data(dest, t->reg);
-                    }
-                    else{
-                        bool_assignment(dest, t);
-                    }
-                  }
+                    parser.verifyType($1, expType->type);
+                    parser.tryAddVariable($1, $2, false);
+                    wrapper.doAssignOp($4, $2, t1->type);
+                }
 
                 | ID ASSIGN Exp SC
                 {
                     parser.verifyIdType($1, $3);
                     parser.verifyVariableDefined($1);
-                    get_ID_reg($1);
-                    Id* id = static_cast<Id*>($1);
-                    string dest = id->type.reg;
-                    Type* t = static_cast<Type*>($3);
-                    if(parser.getVariableType($1) != BOOL)
-                        move_data(dest, t->reg);
-                    else{
-                        bool_assignment(dest, t);
-                    }
+                    wrapper.doAssignOp($3, $1, parser.getVariableType($1))
                 }
                 | Call SC
+
                 | RETURN SC
                 {
                     parser.verifyReturn(VOID);
                     int type = static_cast<int>(VOID);
                 }
+
                 | RETURN Exp SC
                 {
                     int type = static_cast<Type*>($2)->type;
                     parser.verifyReturn(type);
                 }
+
                 | BREAK SC
                 {
                     parser.verifyBreak();
@@ -341,16 +327,16 @@ Exp	:	LPAREN Exp RPAREN
         Type* dest = static_cast<Type*>($$);
         Type* Rsrc = static_cast<Type*>($1);
         Type* src = static_cast<Type*>($3);
-        dest->reg = get_free_register();
+        dest->reg = wrapper.getFreeRegister();
         string binops = static_cast<Binop*>($2)->op;
-        binop(dest, Rsrc, src, binops);
+        wrapper.binop(dest, Rsrc, src, binops);
     }
 
 	|	ID
     {
         parser.verifyVariableDefined($1);
         Id* id = static_cast<Id*>($1);
-        get_ID_reg($1);
+        wrapper.assignRegisterToID($1);
         $$ = new Type(parser.getVariableType($1), id->type.reg);
     }
 
@@ -359,10 +345,10 @@ Exp	:	LPAREN Exp RPAREN
 
 	|	NUM
 	{
-      $$ = new Type(NUM);
-      int num = dynamic_cast<Num*>($1)->val;
-      Type* dest = static_cast<Type*>($$);
-      dest->reg = utils.intToString(num);
+        $$ = new Type(NUM);
+        int num = dynamic_cast<Num*>($1)->val;
+        Type* dest = static_cast<Type*>($$);
+        dest->reg = utils.intToString(num);
     }
 
 	|	NUM B
@@ -402,6 +388,7 @@ Exp	:	LPAREN Exp RPAREN
         b->false_list = b1->true_list;
         b->true_list = b1->false_list;
     }
+
 	|	Exp AND M Exp
 	{
 	    parser.verifyType($1, BOOL);
@@ -418,6 +405,7 @@ Exp	:	LPAREN Exp RPAREN
         b->false_list = code_buffer->merge(b1->false_list, b2->false_list);
         b->true_list = b2->true_list;
     }
+
 	|	Exp OR M Exp
 	{
 	    parser.verifyType($1, BOOL);
@@ -433,6 +421,7 @@ Exp	:	LPAREN Exp RPAREN
         b->true_list = code_buffer->merge(b1->true_list, b2->true_list);
         b->false_list = b2->false_list;
     }
+
 	|	Exp RELOP Exp
 	{
 	    parser.verifyTypes($1, 3, NUM, BYTE, INT);
@@ -443,8 +432,8 @@ Exp	:	LPAREN Exp RPAREN
         Type* b1 = static_cast<Type*>($1);
         Type* b2 = static_cast<Type*>($3);
         string r = static_cast<Binop*>($2)->op;
-        string reg1 = get_reg_if_mem(b1);
-        string reg2 = get_reg_if_mem(b2);
+        string reg1 = wrapper.getRegisterIfMemory(b1);
+        string reg2 = wrapper.getRegisterIfMemory(b2);
 
         if(r == ">="){
             b->true_list.push_back(code_buffer->emit("bge " + reg1 + ", " + reg2 + " "));
@@ -470,16 +459,16 @@ Exp	:	LPAREN Exp RPAREN
         b->false_list.push_back(code_buffer->emit("j "));
 
         if(reg1 != b1->reg){
-            free_register(reg1);
+            wrapper.freeRegister(reg1);
         }
         if(reg2 != b2->reg){
-            free_register(reg2);
+            wrapper.freeRegister(reg2);
         }
 	}
 	;
 
-M   : /*epsilon*/ {$$ = new Label(code_buffer->genLabel());}
-N   : /*epsilon*/ {$$ = new Num(code_buffer->emit("j "));}
+M   : /*epsilon*/ { $$ = new Label(code_buffer->genLabel()); }
+N   : /*epsilon*/ { $$ = new Num(code_buffer->emit("j ")); }
 
 
 %%

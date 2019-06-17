@@ -73,6 +73,8 @@ public:
 
     bool addVariable(stack_data *varType, stack_data *varId, bool isFunctionParameter);
 
+    void tryAddVariable(stack_data *typeData, stack_data *idData, bool isFunctionParameter);
+
     pair<int, int> getVariable(stack_data* stackData);
 
     tokens getVariableType(const stack_data* stackData) const;
@@ -110,8 +112,6 @@ public:
     void inWhile();
 
     void outWhile();
-
-    bool insideWhile();
 };
 
 
