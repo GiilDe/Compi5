@@ -5,15 +5,15 @@
 using namespace std;
 
 void output::endScope(){
-    cout << "---end scope---" << endl;
+//    cout << "---end scope---" << endl;
 }
 
 void output::printID(const string& id, int offset, const string& type) {
-    cout << id << " " << type <<  " " << offset <<  endl;
+//    cout << id << " " << type <<  " " << offset <<  endl;
 }
 
 void output::printPreconditions(const string& id, int preconditionsNum) {
-    cout << id << " - " << preconditionsNum <<  " preconditions" <<  endl;
+//    cout << id << " - " << preconditionsNum <<  " preconditions" <<  endl;
 }
 
 string typeListToString(const std::vector<string>& argTypes) {

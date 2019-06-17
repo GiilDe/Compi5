@@ -1,5 +1,3 @@
-
-
 #ifndef HW3_PARSER_H
 #define HW3_PARSER_H
 
@@ -9,7 +7,6 @@
 #include <utility>
 #include "source.hpp"
 #include "output.hpp"
-#include "parser.tab.hpp"
 #include <vector>
 #include <stack>
 #include <map>
@@ -21,8 +18,6 @@
 #include <cstdarg>
 #include <list>
 #include "bp.hpp"
-#include "parser/Utils.h"
-#include "parser/Parser.h"
 #include "parser/MipsWrapper.h"
 
 #define tokens yytokentype
@@ -47,7 +42,7 @@ extern int yydebug;
 
 Utils utils;
 Parser parser(utils);
-MipsWrapper wrapper(parser);
+MipsWrapper wrapper(&parser);
 
 void yyerror(const char *err) {
     WRAP_ERROR(errorSyn(yylineno));

@@ -73,7 +73,7 @@ void Parser::exitLastScope() {
         }
         string s = makeFunctionType(ret_type, args);
         string to_print = name + " " + s + " " + "0";
-        cout << to_print << endl;
+        // cout << to_print << endl;
     }
 }
 
@@ -104,7 +104,7 @@ bool Parser::addVariable(stack_data *varType, stack_data *varId, bool isFunction
         offset = &offsets_stack.top();
     var_data sd = {type, *offset};
     ScopeTable &t = scopes_tables.back();
-    t.insert(pair<string, var_data>(name, sd));
+    t[name] = sd;
     if (isFunctionParameter)
         (*offset)--;
     else
@@ -292,8 +292,12 @@ void Parser::outWhile() {
 
 Parser::Parser(Utils& utils) :
         utils(utils),
+        scopes_tables(),
+        offsets_stack(),
+        func_names(),
         in_while(0),
-        func_param_offset(-1) {
+        func_param_offset(-1),
+        current_return_type(0) {
 
     offsets_stack.push(0);
 

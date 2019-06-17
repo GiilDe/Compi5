@@ -6,7 +6,7 @@
 #define COMPI5_MIPSWRAPPER_H
 
 
-#include <bp.hpp>
+#include "../bp.hpp"
 #include "Utils.h"
 #include "Parser.h"
 #include <list>
@@ -17,13 +17,13 @@ class MipsWrapper {
 
 private:
     CodeBuffer* buffer;
-    Parser parser;
+    Parser* parser;
     Utils utils;
 
     list<string> free_registers;
 
 public:
-    explicit MipsWrapper(Parser& parser);
+    explicit MipsWrapper(Parser* parser);
 
     void lw(const string& reg /*dest*/, const string& src);
 
@@ -33,6 +33,12 @@ public:
 
     void li(const string& dest, const string& num);
 
+    void push(const string &dest);
+
+    void pop(const string& dest);
+
+    void mov(const string &dest, const string &src);
+
     void binop(Type *dest, Type *Rsrc, Type *src, string op);
 
     string getFreeRegister();
@@ -40,8 +46,6 @@ public:
     void freeRegister(const string& name);
 
     bool isFromMemory(const string& name);
-
-    void moveData(const string& dest, const string& src);
 
     string getRegisterIfMemory(Type* t);
 

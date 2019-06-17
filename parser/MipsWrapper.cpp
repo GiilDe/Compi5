@@ -4,7 +4,7 @@
 
 #include "MipsWrapper.h"
 
-MipsWrapper::MipsWrapper(Parser &parser) :
+MipsWrapper::MipsWrapper(Parser* parser) :
         buffer(&CodeBuffer::instance()),
         parser(parser),
         utils() {
@@ -37,6 +37,32 @@ void MipsWrapper::li(const string &dest, int num) {
 void MipsWrapper::li(const string &dest, const string &num) {
     string s = "li " + dest + ", " + num;
     buffer->emit(s);
+}
+
+void MipsWrapper::push(const string &dest) {
+    buffer->emit("subi $sp, 4");
+    buffer->emit("sw " + dest + ", " + " 0($sp)");
+}
+
+void MipsWrapper::pop(const string& dest) {
+    buffer->emit("lw " + dest + ", " +"0($sp)");
+    buffer->emit("addi $sp, 4");
+}
+
+void MipsWrapper::mov(const string &dest, const string &src) {
+    string real_src = src;
+    // dest is in memory, check source
+    if (isFromMemory(src)) {
+        real_src = getFreeRegister();
+        lw(real_src, src);
+    } else if (utils.isNumber(src)) {
+        real_src = getFreeRegister();
+        li(real_src, src);
+    }
+    sw(real_src, dest);
+    if (real_src != src) {
+        freeRegister(real_src);
+    }
 }
 
 void MipsWrapper::binop(Type *dest, Type *Rsrc, Type *src, string op) {
@@ -101,22 +127,6 @@ bool MipsWrapper::isFromMemory(const string &name) {
            && !utils.isNumber(name);
 }
 
-void MipsWrapper::moveData(const string &dest, const string &src) {
-    string real_src = src;
-    // dest is in memory, check source
-    if (isFromMemory(src)) {
-        real_src = getFreeRegister();
-        lw(real_src, src);
-    } else if (utils.isNumber(src)) {
-        real_src = getFreeRegister();
-        li(real_src, src);
-    }
-    sw(real_src, dest);
-    if (real_src != src) {
-        freeRegister(real_src);
-    }
-}
-
 string MipsWrapper::getRegisterIfMemory(Type *t) {
     if (isFromMemory(t->reg)) {
         string reg = getFreeRegister();
@@ -128,20 +138,20 @@ string MipsWrapper::getRegisterIfMemory(Type *t) {
 
 void MipsWrapper::assignRegisterToID(stack_data *idData) {
     Id *id = dynamic_cast<Id *>(idData);
-    pair<int, int> p = parser.getVariable(id);
+    pair<int, int> p = parser->getVariable(id);
     if (p.first != -1) {
         id->type.type = p.first;
         int offset = p.second;
-        id->type.reg = utils.intToString(offset) + "($fb)";
+        id->type.reg = utils.intToString(offset) + "($fp)";
     }
 }
 
 void MipsWrapper::boolAssignment(const string& dest, Type *t) {
     string T = buffer->genLabel();
-    moveData(dest, "1");
+    mov(dest, "1");
     int skip_F_jump = buffer->emit("j ");
     string F = buffer->genLabel();
-    moveData(dest, "0");
+    mov(dest, "0");
     string after_F = buffer->genLabel();
     buffer->bpatch(buffer->makelist(skip_F_jump), after_F);
     buffer->bpatch(t->true_list, T);
@@ -159,10 +169,10 @@ void MipsWrapper::printCodeBuffer() {
 void MipsWrapper::doAssignOp(stack_data *expTypeData, stack_data *idData, int type) {
     Type *expType = dynamic_cast<Type *>(expTypeData);
     assignRegisterToID(idData);
-    Id *id = dynamic_cast<Id *>(idData);
+    Id *id = dynamic_cast<Id*>(idData);
     string dest = id->type.reg;
     if (type != BOOL) {
-        moveData(dest, expType->reg);
+        mov(dest, expType->reg);
     } else {
         boolAssignment(dest, expType);
     }
