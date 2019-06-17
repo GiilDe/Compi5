@@ -35,13 +35,7 @@
 
 %%
 
-Program	:	Funcs EF
-        {
-         verifyMainFunction();
-         exit_last_scope();
-         code_buffer->printCodeBuffer();
-         exit(0);
-        }
+Program	:	Funcs EF { deriveProgramAndExit(); }
         ;
 
 Funcs	:	/*epsilon*/
@@ -49,12 +43,12 @@ Funcs	:	/*epsilon*/
 	    ;
 
 
-FuncDecl	:	RetType ID LPAREN {new_scope();} Formals RPAREN PreConditions LBRACE {
-                current_return_type = dynamic_cast<Type*>($1)->type;
-                addFunctionDeclaration($1, $2, $5);
+FuncDecl	:	RetType ID LPAREN {parser.newScope();} Formals RPAREN PreConditions LBRACE {
+                parser.setCurrentReturnType($1);
+                parser.addFunctionDeclaration($1, $2, $5);
             } Statements RBRACE
             {
-                exit_scope(true, $2, $7);
+                parser.exitScope(true, $2, $7);
             }
 	        ;
 
@@ -109,7 +103,7 @@ PreConditions	:	/*epsilon*/
 				}
 	            ;
 
-PreCondition	:	PRECOND LPAREN Exp {verifyType($3, BOOL);} RPAREN
+PreCondition	:	PRECOND LPAREN Exp {parser.verifyType($3, BOOL);} RPAREN
                     {$$ = new Preconditions(0);}
 	            ;
 
@@ -128,7 +122,7 @@ Open_statement: If_Start M Simple_statement
                     Type* t = dynamic_cast<Type*>($1);
                     code_buffer->bpatch(t->true_list, label_true);
                     code_buffer->bpatch(t->false_list, after_if_label);
-                    exit_scope(false, NULL, NULL);
+                    parser.exitScope(false, NULL, NULL);
                 }
 
               | If_Start M Open_statement
@@ -138,7 +132,7 @@ Open_statement: If_Start M Simple_statement
                     Type* t = dynamic_cast<Type*>($1);
                     code_buffer->bpatch(t->true_list, label_true);
                     code_buffer->bpatch(t->false_list, after_if_label);
-                    exit_scope(false, NULL, NULL);
+                    parser.exitScope(false, NULL, NULL);
                 }
 
               | If_Else Open_statement
@@ -146,12 +140,12 @@ Open_statement: If_Start M Simple_statement
                     Type *t = dynamic_cast<Type*>($1);
                     string exit_label = code_buffer->genLabel();
                     code_buffer->bpatch(t->exit_list, exit_label);
-                    exit_scope(false, NULL, NULL);
+                    parser.exitScope(false, NULL, NULL);
                 }
 
               | While_Start Open_statement
                 {
-                    exit_scope(false, NULL, NULL);
+                    parser.exitScope(false, NULL, NULL);
                     while_start* ws = dynamic_cast<while_start*>($1);
                     string exp_evaluation_label = dynamic_cast<Label*>(ws->v[0])->label;
                     Type* exp = dynamic_cast<Type*>(ws->v[1]);
@@ -169,12 +163,12 @@ Closed_statement: Simple_statement
                     Type *t = dynamic_cast<Type*>($1);
                     string exit_label = code_buffer->genLabel();
                     code_buffer->bpatch(t->exit_list, exit_label);
-                    exit_scope(false, NULL, NULL);
+                    parser.exitScope(false, NULL, NULL);
                   }
 
                 | While_Start M Closed_statement
                   {
-                    exit_scope(false, NULL, NULL);
+                    parser.exitScope(false, NULL, NULL);
                     while_start* ws = dynamic_cast<while_start*>($1);
                     string exp_evaluation_label = dynamic_cast<Label*>(ws->v[0])->label;
                     Type* exp = dynamic_cast<Type*>(ws->v[1]);
@@ -186,10 +180,10 @@ Closed_statement: Simple_statement
                   }
                 ;
 
-While_Start: WHILE {in_while++;} LPAREN M Exp RPAREN
+While_Start: WHILE { parser.inWhile(); } LPAREN M Exp RPAREN
 {
-    verifyType($5, BOOL);
-    new_scope();
+    parser.verifyType($5, BOOL);
+    parser.newScope();
     $$ = new while_start();
     while_start* ws = dynamic_cast<while_start*>($$);
     ws->v.push_back($4);
@@ -198,11 +192,11 @@ While_Start: WHILE {in_while++;} LPAREN M Exp RPAREN
 
 If_Start: IF LPAREN Exp RPAREN
 {
-    verifyType($3, BOOL); new_scope();
+    parser.verifyType($3, BOOL); parser.newScope();
     $$ = $3;
 }
 
-If_Else: If_Start M Closed_statement N {exit_scope(false, NULL, NULL);} ELSE {new_scope();} M
+If_Else: If_Start M Closed_statement N {parser.exitScope(false, NULL, NULL);} ELSE {parser.newScope();} M
 {
     string label_true = dynamic_cast<Label*>($2)->label;
     string label_false = dynamic_cast<Label*>($8)->label;
@@ -218,9 +212,9 @@ If_Else: If_Start M Closed_statement N {exit_scope(false, NULL, NULL);} ELSE {ne
 
 
 
-Simple_statement:  LBRACE {new_scope();} Statements RBRACE
+Simple_statement:  LBRACE {parser.newScope();} Statements RBRACE
                   {
-                   exit_scope(false, NULL, NULL);
+                   parser.exitScope(false, NULL, NULL);
                   }
 
                 | Type ID SC
@@ -229,7 +223,7 @@ Simple_statement:  LBRACE {new_scope();} Statements RBRACE
                 | Type ID ASSIGN Exp SC
                   {
                     Type *t = dynamic_cast<Type*>($4);
-                    verifyType($1, t->type);
+                    parser.verifyType($1, t->type);
                     tryAddVariable($1, $2, false);
                     get_ID_reg($2);
                     Id* id = static_cast<Id*>($2);
@@ -245,13 +239,13 @@ Simple_statement:  LBRACE {new_scope();} Statements RBRACE
 
                 | ID ASSIGN Exp SC
                 {
-                    verifyIdType($1, $3);
-                    verifyVariableDefined($1);
+                    parser.verifyIdType($1, $3);
+                    parser.verifyVariableDefined($1);
                     get_ID_reg($1);
                     Id* id = static_cast<Id*>($1);
                     string dest = id->type.reg;
                     Type* t = static_cast<Type*>($3);
-                    if(getVariableType($1) != BOOL)
+                    if(parser.getVariableType($1) != BOOL)
                         move_data(dest, t->reg);
                     else{
                         bool_assignment(dest, t);
@@ -260,37 +254,37 @@ Simple_statement:  LBRACE {new_scope();} Statements RBRACE
                 | Call SC
                 | RETURN SC
                 {
-                    verifyReturn(VOID);
+                    parser.verifyReturn(VOID);
                     int type = static_cast<int>(VOID);
                 }
                 | RETURN Exp SC
                 {
                     int type = static_cast<Type*>($2)->type;
-                    verifyReturn(type);
+                    parser.verifyReturn(type);
                 }
                 | BREAK SC
                 {
-                    verifyBreak();
+                    parser.verifyBreak();
                     $$ = new Type(static_cast<int>(VOID));
                 }
 
                 | CONTINUE SC
-                { verifyContinue(); }
+                { parser.verifyContinue(); }
                 ;
 
 Call	:	ID LPAREN ExpList RPAREN
             {
-                verifyFunctionDefined($1);
-                $$ = new Type(getFunctionReturnType($1));
-                verifyRightParams($1, $3);
+                parser.verifyFunctionDefined($1);
+                $$ = new Type(parser.getFunctionReturnType($1));
+                parser.verifyRightParams($1, $3);
             }
 
 		|	ID LPAREN RPAREN
 		    {
-		        verifyFunctionDefined($1);
-		        $$ = new Type(getFunctionReturnType($1));
+		        parser.verifyFunctionDefined($1);
+		        $$ = new Type(parser.getFunctionReturnType($1));
 		        TypesList* empty = new TypesList();
-                verifyRightParams($1, empty);
+                parser.verifyRightParams($1, empty);
 		    }
 	    ;
 
@@ -337,8 +331,8 @@ Exp	:	LPAREN Exp RPAREN
 
 	|	Exp BINOP Exp
 	{
-        int t1 = verifyTypes($1, 3, NUM, BYTE, INT);
-        int t2 = verifyTypes($3, 3, NUM, BYTE, INT);
+        int t1 = parser.verifyTypes($1, 3, NUM, BYTE, INT);
+        int t2 = parser.verifyTypes($3, 3, NUM, BYTE, INT);
 
         // Try NUM precision first, retreat to byte if both are BYTE
         int preciseType = t1 == NUM ? NUM : (t2 == NUM ? NUM : BYTE);
@@ -354,10 +348,10 @@ Exp	:	LPAREN Exp RPAREN
 
 	|	ID
     {
-        verifyVariableDefined($1);
+        parser.verifyVariableDefined($1);
         Id* id = static_cast<Id*>($1);
         get_ID_reg($1);
-        $$ = new Type(getVariableType($1), id->type.reg);
+        $$ = new Type(parser.getVariableType($1), id->type.reg);
     }
 
 	|	Call
@@ -368,12 +362,12 @@ Exp	:	LPAREN Exp RPAREN
       $$ = new Type(NUM);
       int num = dynamic_cast<Num*>($1)->val;
       Type* dest = static_cast<Type*>($$);
-      dest->reg = int_to_string(num);
+      dest->reg = utils.intToString(num);
     }
 
 	|	NUM B
 	{
-	    verifyByteSize($1);
+	    parser.verifyByteSize($1);
 	    $$ = new Type(BYTE);
 	}
 
@@ -398,7 +392,7 @@ Exp	:	LPAREN Exp RPAREN
 
 	|	NOT Exp
 	{
-    	verifyType($2, BOOL);
+    	parser.verifyType($2, BOOL);
         $$ = new Type(BOOL);
 
         Type* b = static_cast<Type*>($$);
@@ -410,8 +404,8 @@ Exp	:	LPAREN Exp RPAREN
     }
 	|	Exp AND M Exp
 	{
-	    verifyType($1, BOOL);
-	    verifyType($3, BOOL);
+	    parser.verifyType($1, BOOL);
+	    parser.verifyType($3, BOOL);
         $$ = new Type(BOOL);
 
         Type* b = static_cast<Type*>($$);
@@ -426,8 +420,8 @@ Exp	:	LPAREN Exp RPAREN
     }
 	|	Exp OR M Exp
 	{
-	    verifyType($1, BOOL);
-     	verifyType($3, BOOL);
+	    parser.verifyType($1, BOOL);
+     	parser.verifyType($3, BOOL);
         $$ = new Type(BOOL);
         Type* b = static_cast<Type*>($$);
         b->bool_exp = true;
@@ -441,8 +435,8 @@ Exp	:	LPAREN Exp RPAREN
     }
 	|	Exp RELOP Exp
 	{
-	    verifyTypes($1, 3, NUM, BYTE, INT);
-	    verifyTypes($3, 3, NUM, BYTE, INT);
+	    parser.verifyTypes($1, 3, NUM, BYTE, INT);
+	    parser.verifyTypes($3, 3, NUM, BYTE, INT);
 	    $$ = new Type(BOOL);
         Type* b = static_cast<Type*>($$);
         b->bool_exp = true;
