@@ -217,7 +217,9 @@ Simple_statement:  LBRACE { parser.newScope(false); } Statements RBRACE
                 { parser.exitScope(false, NULL, NULL); }
 
                 | Type ID SC
-                { parser.tryAddVariable($1, $2, false); }
+                {
+                    parser.tryAddVariable($1, $2, false);
+                }
 
                 | Type ID ASSIGN Exp SC
                 {

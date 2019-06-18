@@ -25,6 +25,21 @@ private:
     map<string, string> relop_map;
     map<string, string> binop_map;
 
+    /**
+     * Label counter for zero-division checks
+     */
+    int zdiv_check_counter;
+
+    void procedureCaller() {
+
+    }
+
+    void procedureCallee() {
+        buffer->emit("move $sp, $fp");
+        pop("$ra");
+        buffer->emit("jr $ra");
+    }
+
 public:
     explicit CodeGenerator(Parser* parser);
 
@@ -73,6 +88,12 @@ public:
     void boolAssignment(const string& dest, Type *t);
 
     void doAssignOp(stack_data* expTypeData, stack_data* idData, int type);
+
+    void procedure();
+
+    void emitZeroDivisionCheck(const string& src);
+
+    void emitMain();
 
 };
 

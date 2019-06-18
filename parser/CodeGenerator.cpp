@@ -9,7 +9,8 @@ CodeGenerator::CodeGenerator(Parser* parser) :
         parser(parser),
         utils(),
         relop_map(),
-        binop_map() {
+        binop_map(),
+        zdiv_check_counter(0) {
 
     for (int i = 0; i <= 7; ++i) {
         string num = utils.intToString(i);
@@ -99,6 +100,10 @@ Type* CodeGenerator::binop(int destType, stack_data *rSrcData, stack_data *srcDa
     if (isFromMemory(ssrc)) {
         ssrc = getFreeRegister();
         lw(ssrc, src->reg);
+    }
+
+    if (binop->op == "/") {
+        emitZeroDivisionCheck(ssrc);
     }
 
     buffer->emit(binop_map.at(binop->op) + " " + sdest + ", " + sRsrc + ", " + ssrc);
@@ -271,4 +276,32 @@ void CodeGenerator::doAssignOp(stack_data *expTypeData, stack_data *idData, int 
     } else {
         boolAssignment(dest, expType);
     }
+}
+
+void CodeGenerator::emitZeroDivisionCheck(const string& src) {
+    string counter = utils.intToString(zdiv_check_counter);
+    string dbzLabel = "dbz" + counter;
+    string ndbzLabel = "ndbz" + counter;
+
+    buffer->emit("beq " + src + " 0 " + dbzLabel);
+    buffer->emit("j " + ndbzLabel);
+
+    buffer->emit(dbzLabel + ":");
+    li("$v0", 4);
+    buffer->emit("la $a0, msg");
+    buffer->emit("syscall");
+    buffer->emit("j halt");
+
+    buffer->emit(ndbzLabel + ":");
+    zdiv_check_counter++;
+}
+
+void CodeGenerator::emitMain() {
+    buffer->emit("main:");
+    // caller("my_main",&temp,sym); // TODO Function call
+    buffer->emit("halt:");
+    buffer->emit("li $v0, 10");
+    buffer->emit("syscall");
+    buffer->emit(".end main");
+    buffer->emitData("msg: .asciiz  \"Error division by zero\\n\"");
 }

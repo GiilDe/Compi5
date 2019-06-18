@@ -50,6 +50,7 @@ void yyerror(const char *err) {
 
 void deriveProgramAndExit() {
     parser.verifyMainFunction();
+    wrapper.emitMain();
     parser.exitLastScope();
     wrapper.printCodeBuffer();
     exit(0);
