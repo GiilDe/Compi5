@@ -38,11 +38,9 @@ struct var_data {
 };
 
 struct func_data {
-    vector<int> param_types;
+    vector<Argument*>* param_types;
     tokens ret_type;
 };
-
-
 
 
 class Scope {
@@ -65,8 +63,6 @@ private:
     vector<Scope> scopes_tables;
     stack<int> offsets_stack;
 
-
-
     vector<string> func_names;
     FuncTable func_table;
 
@@ -74,12 +70,12 @@ private:
     int func_param_offset;
     int current_return_type;
 
-    bool compare_types(const vector<int>& v1, const vector<int>& v2) const {
+    bool compare_types(const vector<Argument*>& v1, const vector<Argument*>& v2) const {
         if(v1.size() != v2.size()){
             return false;
         }
         for (int i = 0; i < v1.size(); ++i){
-            if(!utils.isAssignable(v1[i], v2[i]))
+            if(!utils.isAssignable(v1[i]->type, v2[i]->type))
                 return false;
         }
         return true;
@@ -103,11 +99,13 @@ public:
 
     void tryAddVariable(stack_data *typeData, stack_data *idData, bool isFunctionParameter);
 
-    pair<int, int> getVariable(stack_data* stackData);
+    pair<int, int> getVariable(const string& name);
+
+    pair<int, int> getVariable(const stack_data* stackData);
 
     tokens getVariableType(const stack_data* stackData) const;
 
-    void addFunction(vector<int> param_types, tokens ret_type, const string& name);
+    void addFunction(vector<Argument*>* param_types, tokens ret_type, const string& name);
 
     tokens getFunctionReturnType(stack_data* stackData) const;
 

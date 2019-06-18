@@ -298,7 +298,7 @@ void CodeGenerator::emitZeroDivisionCheck(const string& src) {
 
 void CodeGenerator::emitMain() {
     buffer->emit("main:");
-    // caller("my_main",&temp,sym); // TODO Function call
+    // function_call("my_main"); // TODO Function call
     buffer->emit("halt:");
     buffer->emit("li $v0, 10");
     buffer->emit("syscall");

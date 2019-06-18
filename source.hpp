@@ -60,19 +60,30 @@ public:
     Type type;
     string id;
     explicit Id(const string &id) : id(id) {}
+    Id(const string& id, int type):
+            id(id),
+            type(type) {}
 };
 
-class TypesList : public stack_data {
+class Argument: public stack_data {
 public:
-    vector<int> params;
-    TypesList() : params(){}
-    TypesList(vector<int> vector) : params(vector){}
+    string id;
+    int type;
+
+    Argument(const string& id, int type): id(id), type(type) {}
+};
+
+class ArgumentList : public stack_data {
+public:
+    vector<Argument*>* params;
+    ArgumentList() : params(){}
+    explicit ArgumentList(vector<Argument*>* vector) : params(vector){}
 };
 
 class Preconditions : public stack_data{
 public:
     int preconditions_num;
-    Preconditions(int num) : preconditions_num(num){}
+    explicit Preconditions(int num) : preconditions_num(num){}
 };
 
 

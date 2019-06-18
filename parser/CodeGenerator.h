@@ -71,7 +71,19 @@ public:
     string getFreeRegister();
 
     void function_call(const string& id, const stack_data* argumentsData){
-        const TypesList* typesList = dynamic_cast<const TypesList*>(argumentsData);
+        const ArgumentList* typesList = dynamic_cast<const ArgumentList*>(argumentsData);
+        const vector<Argument*>& types = *typesList->params;
+        vector<string> arguments;
+
+        FOR_EACH_CONST(iter, vector<Argument*>, types) {
+            const Argument* arg = *iter;
+            pair<int, int> varData = parser->getVariable(arg->id);
+            if (varData.first == -1) {
+                // Not a variable, so probably an expression
+            }
+            int offset = varData.second;
+        }
+
         procedureCallerBefore(id, arguments);
 //        procedureCalleeStart();
 //        procedureCalleeEnd();
@@ -81,6 +93,10 @@ public:
     void newFunction(stack_data* funcIdData) {
         Id* funcId = dynamic_cast<Id*>(funcIdData);
         string id = funcId->id;
+
+        if (id == "main") {
+            id = "__start"; // Wrap main function
+        }
         buffer->emit(id + ":");
         procedureCalleeStart();
         procedureCalleeEnd();
