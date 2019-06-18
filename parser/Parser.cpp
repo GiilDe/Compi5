@@ -16,10 +16,10 @@ static bool var_comp_rev(const pair<string, var_data>& v1, const pair<string, va
     return d1.offset > d2.offset;
 }
 
-void Parser::newScope() {
+void Parser::newScope(bool isFuncScope) {
     func_param_offset = -1;
     offsets_stack.push(offsets_stack.top());
-    scopes_tables.push_back(ScopeTable());
+    scopes_tables.push_back(Scope(ScopeTable(), isFuncScope));
 }
 
 void Parser::exitScope(bool isFuncScope, stack_data *name, stack_data *precondNum) {
@@ -31,7 +31,8 @@ void Parser::exitScope(bool isFuncScope, stack_data *name, stack_data *precondNu
     }
     int offset = offsets_stack.top();
     offsets_stack.pop();
-    ScopeTable &vars_to_print = scopes_tables.back();
+    Scope &scope = scopes_tables.back();
+    ScopeTable &vars_to_print = scope.table;
     vector<pair<string, var_data> > vars_pos;
     vector<pair<string, var_data> > vars_neg;
 
@@ -78,8 +79,9 @@ void Parser::exitLastScope() {
 }
 
 bool Parser::containsVar(const string& name) const {
-    for (vector<ScopeTable>::const_iterator i = scopes_tables.begin(); i != scopes_tables.end(); ++i) {
-        const ScopeTable &t = *i;
+    for (vector<Scope>::const_iterator i = scopes_tables.begin(); i != scopes_tables.end(); ++i) {
+        const Scope& scope = *i;
+        const ScopeTable &t = scope.table;
         if (t.find(name) != t.end()) {
             return true;
         }
@@ -103,7 +105,8 @@ bool Parser::addVariable(stack_data *varType, stack_data *varId, bool isFunction
     else
         offset = &offsets_stack.top();
     var_data sd = {type, *offset};
-    ScopeTable &t = scopes_tables.back();
+    Scope scope = scopes_tables.back();
+    ScopeTable &t = scope.table;
     t[name] = sd;
     if (isFunctionParameter)
         (*offset)--;
@@ -122,8 +125,9 @@ void Parser::tryAddVariable(stack_data *typeData, stack_data *idData, bool isFun
 pair<int, int> Parser::getVariable(stack_data* stackData){
     Id* varId = dynamic_cast<Id*>(stackData);
 
-    FOR_EACH(iter, vector<ScopeTable>, scopes_tables) {
-        ScopeTable &t = *iter;
+    FOR_EACH(iter, vector<Scope>, scopes_tables) {
+        Scope& scope = *iter;
+        ScopeTable &t = scope.table;
         if (t.find(varId->id) != t.end()) {
             var_data& varData = t[varId->id];
             return pair<int, int>(varData.type, varData.offset);
@@ -135,8 +139,9 @@ pair<int, int> Parser::getVariable(stack_data* stackData){
 tokens Parser::getVariableType(const stack_data* stackData) const {
     const Id* varId = dynamic_cast<const Id*>(stackData);
 
-    FOR_EACH_CONST(iter, vector<ScopeTable>, scopes_tables) {
-        const ScopeTable &t = *iter;
+    FOR_EACH_CONST(iter, vector<Scope>, scopes_tables) {
+        const Scope& scope = *iter;
+        const ScopeTable &t = scope.table;
         if (t.find(varId->id) != t.end()) {
             const var_data& varData = t.at(varId->id);
             return varData.type;
@@ -207,8 +212,9 @@ void Parser::verifyIdType(stack_data* idStackData, stack_data* expStackData) con
     Id* id = dynamic_cast<Id*>(idStackData);
     Type* type = dynamic_cast<Type*>(expStackData);
 
-    FOR_EACH_CONST(iter, vector<ScopeTable>, scopes_tables) {
-        const ScopeTable& t = *iter;
+    FOR_EACH_CONST(iter, vector<Scope>, scopes_tables) {
+        const Scope &scope = *iter;
+        const ScopeTable& t = scope.table;
         if (t.find(id->id) != t.end()) {
             const var_data& varData = t.at(id->id);
             if (!utils.isAssignable(varData.type, type->type)) {

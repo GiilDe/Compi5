@@ -31,6 +31,17 @@ struct func_data {
     tokens ret_type;
 };
 
+
+class Scope {
+
+public:
+    map<string, var_data> table;
+    bool isFunctionScope;
+
+    Scope(const map<string, var_data> &table, bool isFunctionScope) : table(table),
+                                                                      isFunctionScope(isFunctionScope) {}
+};
+
 typedef map<string, var_data> ScopeTable;
 typedef map<string, func_data> FuncTable;
 
@@ -38,7 +49,7 @@ class Parser {
 private:
     Utils utils;
 
-    vector<ScopeTable> scopes_tables;
+    vector<Scope> scopes_tables;
     stack<int> offsets_stack;
 
     vector<string> func_names;
@@ -63,7 +74,7 @@ public:
 
     explicit Parser(Utils& utils);
 
-    void newScope();
+    void newScope(bool isFuncScope);
 
     void exitScope(bool isFuncScope, stack_data* name, stack_data* precondNum);
 

@@ -43,7 +43,7 @@ Funcs	:	/*epsilon*/
 	    ;
 
 
-FuncDecl	:	RetType ID LPAREN {parser.newScope();} Formals RPAREN PreConditions LBRACE
+FuncDecl	:	RetType ID LPAREN {parser.newScope(true);} Formals RPAREN PreConditions LBRACE
             {
                 parser.setCurrentReturnType($1);
                 parser.addFunctionDeclaration($1, $2, $5);
@@ -185,7 +185,7 @@ Closed_statement: Simple_statement
 While_Start: WHILE { parser.inWhile(); } LPAREN M Exp RPAREN
 {
     parser.verifyType($5, BOOL);
-    parser.newScope();
+    parser.newScope(false);
     while_start* ws = new while_start();
     ws->v.push_back($4);
     ws->v.push_back($5);
@@ -195,11 +195,11 @@ While_Start: WHILE { parser.inWhile(); } LPAREN M Exp RPAREN
 If_Start: IF LPAREN Exp RPAREN
 {
     parser.verifyType($3, BOOL);
-    parser.newScope();
+    parser.newScope(false);
     $$ = $3;
 }
 
-If_Else: If_Start M Closed_statement N {parser.exitScope(false, NULL, NULL);} ELSE { parser.newScope(); } M
+If_Else: If_Start M Closed_statement N {parser.exitScope(false, NULL, NULL);} ELSE { parser.newScope(false); } M
 {
     string label_true = dynamic_cast<Label*>($2)->label;
     string label_false = dynamic_cast<Label*>($8)->label;
@@ -213,7 +213,7 @@ If_Else: If_Start M Closed_statement N {parser.exitScope(false, NULL, NULL);} EL
     t->exit_list.push_back(exit_address);
 }
 
-Simple_statement:  LBRACE { parser.newScope(); } Statements RBRACE
+Simple_statement:  LBRACE { parser.newScope(false); } Statements RBRACE
                 { parser.exitScope(false, NULL, NULL); }
 
                 | Type ID SC
@@ -304,16 +304,7 @@ Type	:	INT
 	    ;
 
 Exp	:	LPAREN Exp RPAREN
-    {
-        $$ = new Type(static_cast<Type*>($2)->type);
-        Type* b = static_cast<Type*>($$);
-        Type* b1 = static_cast<Type*>($2);
-        b->bool_exp = b1->bool_exp;
-        if(b1->bool_exp){
-            b->true_list = b1->true_list;
-            b->false_list = b1->false_list;
-        }
-    }
+    { $$ = $2 }
 
 	|	Exp BINOP Exp
 	{
@@ -322,14 +313,8 @@ Exp	:	LPAREN Exp RPAREN
 
         // Try NUM precision first, retreat to byte if both are BYTE
         int preciseType = t1 == NUM ? NUM : (t2 == NUM ? NUM : BYTE);
-        $$ = new Type(preciseType);
 
-        Type* dest = static_cast<Type*>($$);
-        Type* Rsrc = static_cast<Type*>($1);
-        Type* src = static_cast<Type*>($3);
-        dest->reg = wrapper.getFreeRegister();
-        string binops = static_cast<Binop*>($2)->op;
-        wrapper.binop(dest, Rsrc, src, binops);
+        $$ = wrapper.binop(preciseType, $1, $3, $2);
     }
 
 	|	ID
@@ -361,109 +346,36 @@ Exp	:	LPAREN Exp RPAREN
 	{ $$ = new Type(STRING); }
 
 	|	TRUE
-	{
-	    $$ = new Type(BOOL);
-	    Type* b = static_cast<Type*>($$);
-	    b->bool_exp = true;
-	    b->true_list.push_back(code_buffer->emit("j "));
-	}
+	{ $$ = wrapper.boolTrue(); }
 
 	|	FALSE
-	{
-	    $$ = new Type(BOOL);
-        Type* b = static_cast<Type*>($$);
-        b->bool_exp = false;
-        b->false_list.push_back(code_buffer->emit("j "));
-	}
+	{ $$ = wrapper.boolFalse(); }
 
 	|	NOT Exp
 	{
     	parser.verifyType($2, BOOL);
-        $$ = new Type(BOOL);
-
-        Type* b = static_cast<Type*>($$);
-        Type* b1 = static_cast<Type*>($2);
-
-        b->bool_exp = true;
-        b->false_list = b1->true_list;
-        b->true_list = b1->false_list;
+        $$ = wrapper.boolNot($2);
     }
 
 	|	Exp AND M Exp
 	{
 	    parser.verifyType($1, BOOL);
 	    parser.verifyType($3, BOOL);
-        $$ = new Type(BOOL);
-
-        Type* b = static_cast<Type*>($$);
-        b->bool_exp = true;
-
-        Type* b1 = static_cast<Type*>($1);
-        Type* b2 = static_cast<Type*>($4);
-        string label = static_cast<Label*>($3)->label;
-        code_buffer->bpatch(b1->true_list, label);
-        b->false_list = code_buffer->merge(b1->false_list, b2->false_list);
-        b->true_list = b2->true_list;
+        $$ = wrapper.boolAnd($1, $4, $3);
     }
 
 	|	Exp OR M Exp
 	{
 	    parser.verifyType($1, BOOL);
      	parser.verifyType($3, BOOL);
-        $$ = new Type(BOOL);
-        Type* b = static_cast<Type*>($$);
-        b->bool_exp = true;
-
-        Type* b1 = static_cast<Type*>($1);
-        Type* b2 = static_cast<Type*>($4);
-        string label = static_cast<Label*>($3)->label;
-        code_buffer->bpatch(b1->false_list, label);
-        b->true_list = code_buffer->merge(b1->true_list, b2->true_list);
-        b->false_list = b2->false_list;
+        $$ = wrapper.boolOr($1, $4, $3);
     }
 
 	|	Exp RELOP Exp
 	{
 	    parser.verifyTypes($1, 3, NUM, BYTE, INT);
 	    parser.verifyTypes($3, 3, NUM, BYTE, INT);
-	    $$ = new Type(BOOL);
-        Type* b = static_cast<Type*>($$);
-        b->bool_exp = true;
-        Type* b1 = static_cast<Type*>($1);
-        Type* b2 = static_cast<Type*>($3);
-        string r = static_cast<Binop*>($2)->op;
-        string reg1 = wrapper.getRegisterIfMemory(b1);
-        string reg2 = wrapper.getRegisterIfMemory(b2);
-
-        if(r == ">="){
-            b->true_list.push_back(code_buffer->emit("bge " + reg1 + ", " + reg2 + " "));
-        }
-        else if(r == ">"){
-            b->true_list.push_back(code_buffer->emit("bgt " + reg1 + ", " + reg2 + " "));
-        }
-        else if(r == "<="){
-            b->true_list.push_back(code_buffer->emit("ble " + reg1 + ", " + reg2 + " "));
-        }
-        else if(r == "<"){
-            b->true_list.push_back(code_buffer->emit("blt " + reg1 + ", " + reg2 + " "));
-        }
-        else if(r == "<"){
-            b->true_list.push_back(code_buffer->emit("blt " + reg1 + ", " + reg2 + " "));
-        }
-        else if(r == "=="){
-            b->true_list.push_back(code_buffer->emit("beq " + reg1 + ", " + reg2 + " "));
-        }
-        else if(r == "!="){
-            b->true_list.push_back(code_buffer->emit("bne " + reg1 + ", " + reg2 + " "));
-        }
-        b->false_list.push_back(code_buffer->emit("j "));
-
-        if(reg1 != b1->reg){
-            wrapper.freeRegister(reg1);
-        }
-        if(reg2 != b2->reg){
-            wrapper.freeRegister(reg2);
-        }
+        $$ = wrapper.relop($1, $3, $2);
 	}
 	;
 

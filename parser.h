@@ -18,7 +18,7 @@
 #include <cstdarg>
 #include <list>
 #include "bp.hpp"
-#include "parser/MipsWrapper.h"
+#include "parser/CodeGenerator.h"
 
 #define tokens yytokentype
 #define YYERROR_VERBOSE 1
@@ -42,7 +42,7 @@ extern int yydebug;
 
 Utils utils;
 Parser parser(utils);
-MipsWrapper wrapper(&parser);
+CodeGenerator wrapper(&parser);
 
 void yyerror(const char *err) {
     WRAP_ERROR(errorSyn(yylineno));
