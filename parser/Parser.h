@@ -43,6 +43,8 @@ struct func_data {
 };
 
 
+
+
 class Scope {
 
 public:
@@ -63,6 +65,8 @@ private:
     vector<Scope> scopes_tables;
     stack<int> offsets_stack;
 
+
+
     vector<string> func_names;
     FuncTable func_table;
 
@@ -82,6 +86,8 @@ private:
     }
 
 public:
+
+    int scope_var_num;
 
     explicit Parser(Utils& utils);
 

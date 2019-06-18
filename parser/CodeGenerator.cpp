@@ -54,9 +54,9 @@ void CodeGenerator::li(const string &dest, const string &num) {
     buffer->emit(s);
 }
 
-void CodeGenerator::push(const string &dest) {
+void CodeGenerator::push(const string &src) {
     buffer->emit("subi $sp, 4");
-    buffer->emit("sw " + dest + ", " + " 0($sp)");
+    mov("0($sp)", src);
 }
 
 void CodeGenerator::pop(const string& dest) {
@@ -136,7 +136,7 @@ Type* CodeGenerator::relop(stack_data* b1Data, stack_data* b2Data, stack_data* o
     vector<int> true_list;
     vector<int> false_list;
 
-    true_list.push_back(buffer->emit(relop_map.at(op) + " " + reg1 + ", " + reg2));
+    true_list.push_back(buffer->emit(relop_map.at(op) + " " + reg1 + ", " + reg2 + " "));
     false_list.push_back(buffer->emit("j "));
 
     if (reg1 != b1->reg) {

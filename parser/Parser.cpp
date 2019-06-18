@@ -17,6 +17,7 @@ static bool var_comp_rev(const pair<string, var_data>& v1, const pair<string, va
 }
 
 void Parser::newScope(bool isFuncScope) {
+    scope_var_num = 0;
     func_param_offset = -1;
     offsets_stack.push(offsets_stack.top());
     scopes_tables.push_back(Scope(ScopeTable(), isFuncScope));
@@ -90,6 +91,8 @@ bool Parser::containsVar(const string& name) const {
 }
 
 bool Parser::addVariable(stack_data *varType, stack_data *varId, bool isFunctionParameter) {
+    scope_var_num++;
+
     Type *conv1 = dynamic_cast<Type *>(varType);
     Id *conv2 = dynamic_cast<Id *>(varId);
 

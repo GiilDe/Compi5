@@ -30,11 +30,36 @@ private:
      */
     int zdiv_check_counter;
 
-    void procedureCaller() {
-
+    void procedureCallerBefore(const string& id, const vector<string>& arguments) {
+        for (int i = 0; i < arguments.size(); ++i) {
+            push(arguments[i]);
+        }
+        push("$fp");
+        buffer->emit("jal " + id);
     }
 
-    void procedureCallee() {
+    void procedureCallerAfter(int var_num) {
+        pop("$fp");
+        int real_var_size = 4*var_num;
+        string var_num_s = utils.intToString(real_var_size);
+        buffer->emit("addi " + var_num_s + ", $sp");
+    }
+
+    void save_callee_registers(){
+    }
+
+    void restore_callee_registers(){
+    }
+
+    void procedureCalleeStart() {
+        int var_num = parser->scope_var_num * 4;
+        string var_num_s = utils.intToString(var_num);
+        save_callee_registers();
+        buffer->emit("subi " + var_num_s + ", $sp");
+    }
+
+    void procedureCalleeEnd() {
+        restore_callee_registers();
         buffer->emit("move $sp, $fp");
         pop("$ra");
         buffer->emit("jr $ra");
@@ -44,6 +69,22 @@ public:
     explicit CodeGenerator(Parser* parser);
 
     string getFreeRegister();
+
+    void function_call(const string& id, const stack_data* argumentsData){
+        const TypesList* typesList = dynamic_cast<const TypesList*>(argumentsData);
+        procedureCallerBefore(id, arguments);
+//        procedureCalleeStart();
+//        procedureCalleeEnd();
+        procedureCallerAfter(arguments.size());
+    }
+
+    void newFunction(stack_data* funcIdData) {
+        Id* funcId = dynamic_cast<Id*>(funcIdData);
+        string id = funcId->id;
+        buffer->emit(id + ":");
+        procedureCalleeStart();
+        procedureCalleeEnd();
+    }
 
     void freeRegister(const string& name);
 
@@ -65,7 +106,7 @@ public:
 
     void li(const string& dest, const string& num);
 
-    void push(const string &dest);
+    void push(const string &src);
 
     void pop(const string& dest);
 
