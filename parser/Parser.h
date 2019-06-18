@@ -8,8 +8,19 @@
 #include "../output.hpp"
 #include "Utils.h"
 #include <iostream>
-#include <sstream>
+#include <stdlib.h>
+#include <stdio.h>
+#include <utility>
+#include <vector>
 #include <stack>
+#include <map>
+#include <set>
+#include <string>
+#include <algorithm>
+#include <iostream>
+#include <sstream>
+#include <cstdarg>
+#include <list>
 
 using namespace std;
 using namespace output;

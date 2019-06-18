@@ -5,8 +5,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <utility>
-#include "source.hpp"
-#include "output.hpp"
 #include <vector>
 #include <stack>
 #include <map>
@@ -17,6 +15,8 @@
 #include <sstream>
 #include <cstdarg>
 #include <list>
+#include "source.hpp"
+#include "output.hpp"
 #include "bp.hpp"
 #include "parser/CodeGenerator.h"
 

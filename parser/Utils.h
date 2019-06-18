@@ -18,7 +18,7 @@ using namespace std;
     for (ds::iterator iter = name.begin(); iter != name.end(); iter++)
 
 #define FOR_EACH_CONST(iter, ds, name) \
-    for (__wrap_iter<ds::const_pointer> iter = name.begin(); iter != name.end(); iter++)
+    for (ds::const_iterator iter = name.begin(); iter != name.end(); iter++)
 
 
 #define WRAP_ERROR(exp) \
