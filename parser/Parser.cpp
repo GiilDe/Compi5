@@ -105,7 +105,7 @@ bool Parser::addVariable(stack_data *varType, stack_data *varId, bool isFunction
     else
         offset = &offsets_stack.top();
     var_data sd = {type, *offset};
-    Scope scope = scopes_tables.back();
+    Scope& scope = scopes_tables.back();
     ScopeTable &t = scope.table;
     t[name] = sd;
     if (isFunctionParameter)

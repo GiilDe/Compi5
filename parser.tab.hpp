@@ -1,13 +1,14 @@
-/* A Bison parser, made by GNU Bison 3.0.4.  */
+/* A Bison parser, made by GNU Bison 2.3.  */
 
-/* Bison interface for Yacc-like parsers in C
+/* Skeleton interface for Bison's Yacc-like parsers in C
 
-   Copyright (C) 1984, 1989-1990, 2000-2015 Free Software Foundation, Inc.
+   Copyright (C) 1984, 1989, 1990, 2000, 2001, 2002, 2003, 2004, 2005, 2006
+   Free Software Foundation, Inc.
 
-   This program is free software: you can redistribute it and/or modify
+   This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
-   the Free Software Foundation, either version 3 of the License, or
-   (at your option) any later version.
+   the Free Software Foundation; either version 2, or (at your option)
+   any later version.
 
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,7 +16,9 @@
    GNU General Public License for more details.
 
    You should have received a copy of the GNU General Public License
-   along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor,
+   Boston, MA 02110-1301, USA.  */
 
 /* As a special exception, you may create a larger work that contains
    part or all of the Bison parser skeleton and distribute that work
@@ -30,64 +33,85 @@
    This special exception was added by the Free Software Foundation in
    version 2.2 of Bison.  */
 
-#ifndef YY_YY_CYGDRIVE_C_USERS_GILAD_CLIONPROJECTS_COMPI5_PARSER_TAB_HPP_INCLUDED
-# define YY_YY_CYGDRIVE_C_USERS_GILAD_CLIONPROJECTS_COMPI5_PARSER_TAB_HPP_INCLUDED
-/* Debug traces.  */
-#ifndef YYDEBUG
-# define YYDEBUG 0
-#endif
-#if YYDEBUG
-extern int yydebug;
-#endif
-
-/* Token type.  */
+/* Tokens.  */
 #ifndef YYTOKENTYPE
 # define YYTOKENTYPE
-  enum yytokentype
-  {
-    VOID = 258,
-    INT = 259,
-    BYTE = 260,
-    B = 261,
-    BOOL = 262,
-    OR = 263,
-    AND = 264,
-    NOT = 265,
-    TRUE = 266,
-    FALSE = 267,
-    RETURN = 268,
-    IF = 269,
-    ELSE = 270,
-    WHILE = 271,
-    BREAK = 272,
-    CONTINUE = 273,
-    PRECOND = 274,
-    SC = 275,
-    COMMA = 276,
-    LPAREN = 277,
-    RPAREN = 278,
-    LBRACE = 279,
-    RBRACE = 280,
-    ASSIGN = 281,
-    RELOP = 282,
-    BINOP = 283,
-    ID = 284,
-    NUM = 285,
-    STRING = 286,
-    EF = 287
-  };
+   /* Put the tokens into the symbol table, so that GDB and other debuggers
+      know about them.  */
+   enum yytokentype {
+     VOID = 258,
+     INT = 259,
+     BYTE = 260,
+     B = 261,
+     BOOL = 262,
+     OR = 263,
+     AND = 264,
+     NOT = 265,
+     TRUE = 266,
+     FALSE = 267,
+     RETURN = 268,
+     IF = 269,
+     ELSE = 270,
+     WHILE = 271,
+     BREAK = 272,
+     CONTINUE = 273,
+     PRECOND = 274,
+     SC = 275,
+     COMMA = 276,
+     LPAREN = 277,
+     RPAREN = 278,
+     LBRACE = 279,
+     RBRACE = 280,
+     ASSIGN = 281,
+     RELOP = 282,
+     BINOP = 283,
+     ID = 284,
+     NUM = 285,
+     STRING = 286,
+     EF = 287
+   };
 #endif
+/* Tokens.  */
+#define VOID 258
+#define INT 259
+#define BYTE 260
+#define B 261
+#define BOOL 262
+#define OR 263
+#define AND 264
+#define NOT 265
+#define TRUE 266
+#define FALSE 267
+#define RETURN 268
+#define IF 269
+#define ELSE 270
+#define WHILE 271
+#define BREAK 272
+#define CONTINUE 273
+#define PRECOND 274
+#define SC 275
+#define COMMA 276
+#define LPAREN 277
+#define RPAREN 278
+#define LBRACE 279
+#define RBRACE 280
+#define ASSIGN 281
+#define RELOP 282
+#define BINOP 283
+#define ID 284
+#define NUM 285
+#define STRING 286
+#define EF 287
 
-/* Value type.  */
+
+
+
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 typedef int YYSTYPE;
-# define YYSTYPE_IS_TRIVIAL 1
+# define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1
+# define YYSTYPE_IS_TRIVIAL 1
 #endif
-
 
 extern YYSTYPE yylval;
 
-int yyparse (void);
-
-#endif /* !YY_YY_CYGDRIVE_C_USERS_GILAD_CLIONPROJECTS_COMPI5_PARSER_TAB_HPP_INCLUDED  */
