@@ -31,6 +31,9 @@ CodeGenerator::CodeGenerator(Parser* parser) :
     binop_map["-"] = "sub";
     binop_map["*"] = "mul";
     binop_map["/"] = "div";
+
+    buffer->emit(".globl main");
+    buffer->emit(".ent main");
 }
 
 
@@ -55,13 +58,13 @@ void CodeGenerator::li(const string &dest, const string &num) {
 }
 
 void CodeGenerator::push(const string &src) {
-    buffer->emit("subi $sp, 4");
     mov("0($sp)", src);
+    buffer->emit("sub $sp, $sp, 4");
 }
 
 void CodeGenerator::pop(const string& dest) {
+    buffer->emit("add $sp, $sp, 4");
     buffer->emit("lw " + dest + ", " +"0($sp)");
-    buffer->emit("addi $sp, 4");
 }
 
 void CodeGenerator::mov(const string &dest, const string &src) {
@@ -90,7 +93,7 @@ Type* CodeGenerator::binop(int destType, stack_data *rSrcData, stack_data *srcDa
     string sRsrc = Rsrc->reg;
     string ssrc = src->reg;
 
-    if (isFromMemory(sdest)) {
+    if (isFromMemory(sdest) || sdest == "") {
         sdest = getFreeRegister();
     }
     if (isFromMemory(sRsrc)) {
@@ -224,6 +227,7 @@ bool CodeGenerator::isFromMemory(const string &name) {
     return name.size() > 1
            && name.at(1) != 's'
            && name.at(1) != 't'
+           && name != "$fp"
            && !utils.isNumber(name);
 }
 
@@ -236,14 +240,17 @@ string CodeGenerator::getRegisterIfMemory(Type *t) {
     return t->reg;
 }
 
-void CodeGenerator::assignRegisterToID(stack_data *idData) {
+Type* CodeGenerator::assignRegisterToID(stack_data *idData) {
     Id *id = dynamic_cast<Id *>(idData);
     pair<int, int> p = parser->getVariable(id);
     if (p.first != -1) {
         id->type.type = p.first;
-        int offset = p.second;
+        // Align offset to 4 bytes
+        int offset = 4 * p.second;
         id->type.reg = utils.intToString(offset) + "($fp)";
     }
+
+    return new Type(parser->getVariableType(idData), id->type.reg);
 }
 
 void CodeGenerator::boolAssignment(const string& dest, Type *t) {
@@ -298,7 +305,8 @@ void CodeGenerator::emitZeroDivisionCheck(const string& src) {
 
 void CodeGenerator::emitMain() {
     buffer->emit("main:");
-    // function_call("my_main"); // TODO Function call
+    buffer->emit("move $fp, $sp");
+    function_call(START_FUN, new ArgumentList()); // TODO Function call
     buffer->emit("halt:");
     buffer->emit("li $v0, 10");
     buffer->emit("syscall");

@@ -2,8 +2,6 @@
 #define HW3_PARSER_H
 
 #include <iostream>
-#include <stdlib.h>
-#include <stdio.h>
 #include <utility>
 #include <vector>
 #include <stack>
@@ -50,8 +48,8 @@ void yyerror(const char *err) {
 
 void deriveProgramAndExit() {
     parser.verifyMainFunction();
-    wrapper.emitMain();
     parser.exitLastScope();
+    wrapper.emitMain();
     wrapper.printCodeBuffer();
     exit(0);
 }

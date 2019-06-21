@@ -75,9 +75,9 @@ public:
 
 class ArgumentList : public stack_data {
 public:
-    vector<Argument*>* params;
+    vector<Argument*> params;
     ArgumentList() : params(){}
-    explicit ArgumentList(vector<Argument*>* vector) : params(vector){}
+    explicit ArgumentList(const vector<Argument*>& vector) : params(vector){}
 };
 
 class Preconditions : public stack_data{

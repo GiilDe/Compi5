@@ -7,9 +7,6 @@
 
 #include "../output.hpp"
 #include "Utils.h"
-#include <iostream>
-#include <stdlib.h>
-#include <stdio.h>
 #include <utility>
 #include <vector>
 #include <stack>
@@ -38,8 +35,9 @@ struct var_data {
 };
 
 struct func_data {
-    vector<Argument*>* param_types;
+    vector<Argument*> param_types;
     tokens ret_type;
+
 };
 
 
@@ -64,11 +62,12 @@ private:
     stack<int> offsets_stack;
 
     vector<string> func_names;
-    FuncTable func_table;
 
     int in_while;
     int func_param_offset;
     int current_return_type;
+
+    map<string, func_data> func_table;
 
     bool compare_types(const vector<Argument*>& v1, const vector<Argument*>& v2) const {
         if(v1.size() != v2.size()){
@@ -105,7 +104,7 @@ public:
 
     tokens getVariableType(const stack_data* stackData) const;
 
-    void addFunction(vector<Argument*>* param_types, tokens ret_type, const string& name);
+    void addFunction(vector<Argument*> param_types, tokens ret_type, const string& name);
 
     tokens getFunctionReturnType(stack_data* stackData) const;
 

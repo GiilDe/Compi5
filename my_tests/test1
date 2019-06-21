@@ -1,7 +1,7 @@
-
-int main(){
+void main(){
     int x = 2;
     int z = 5;
     int y = 2*z/x;
-    return 0;
+
+    printi(z);
 }

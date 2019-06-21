@@ -69,7 +69,7 @@ void Parser::exitLastScope() {
         func_data data = func_table[name];
         string ret_type = utils.typeToString(data.ret_type);
         vector<string> args;
-        for(vector<Argument*>::const_iterator iter = data.param_types->begin(); iter != data.param_types->end(); ++iter){
+        for(vector<Argument*>::const_iterator iter = data.param_types.begin(); iter != data.param_types.end(); ++iter){
             const Argument* arg = *iter;
             args.push_back(utils.typeToString(arg->type));
         }
@@ -176,8 +176,8 @@ void Parser::verifyFunctionDefined(stack_data* stackData) const {
 
 void Parser::verifyRightParams(stack_data* func_name, stack_data* param_list) const {
     string functionId = dynamic_cast<Id*>(func_name)->id;
-    const vector<Argument*>& params = *dynamic_cast<ArgumentList*>(param_list)->params;
-    const vector<Argument*>& real_params = *func_table.at(functionId).param_types;
+    const vector<Argument*>& params = dynamic_cast<ArgumentList*>(param_list)->params;
+    const vector<Argument*>& real_params = func_table.at(functionId).param_types;
     vector<string> params_string;
 
     FOR_EACH_CONST(iter, vector<Argument*>, real_params) {
@@ -270,7 +270,7 @@ void Parser::verifyContinue() const {
 void Parser::verifyMainFunction() const {
     FuncTable::const_iterator iterator = func_table.find("main");
     if (iterator == func_table.end()                // main is not declared in code
-        || !(*iterator).second.param_types->empty()  // main() has parameters (and shouldn't)
+        || !(*iterator).second.param_types.empty()  // main() has parameters (and shouldn't)
         || (*iterator).second.ret_type != VOID)     // Return type is not void
     {
         WRAP_ERROR(errorMainMissing());
@@ -285,12 +285,12 @@ void Parser::addFunctionDeclaration(stack_data* retType, stack_data *idVarData, 
     addFunction(func_params->params, ret_type, id);
 }
 
-void Parser::addFunction(vector<Argument*>* param_types, tokens ret_type, const string& name) {
+void Parser::addFunction(vector<Argument*> param_types, tokens ret_type, const string& name) {
     func_data fd = {param_types, ret_type};
     if (func_table.find(name) != func_table.end()) {
         WRAP_ERROR(errorDef(yylineno, name));
     }
-    func_table[name] = fd;
+    func_table.insert(make_pair(name, fd));
     func_names.push_back(name);
 }
 
@@ -315,14 +315,11 @@ Parser::Parser(Utils& utils) :
 
     offsets_stack.push(0);
 
-    func_data fd = {new vector<Argument*>(), static_cast<tokens>(STRING)};
-    func_table.insert(make_pair("test", fd));
-
     // Add library functions
-    vector<Argument*>* v1 = new vector<Argument*>();
-    v1->push_back(new Argument("s", STRING));
+    vector<Argument*> v1;
+    v1.push_back(new Argument("s", STRING));
     addFunction(v1, static_cast<tokens>(VOID), "print");
-    vector<Argument*>* v2 = new vector<Argument*>();
-    v2->push_back(new Argument("n", INT));
+    vector<Argument*> v2;
+    v2.push_back(new Argument("n", INT));
     addFunction(v2, static_cast<tokens>(VOID), "printi");
 }

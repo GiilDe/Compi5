@@ -43,15 +43,20 @@ Funcs	:	/*epsilon*/
 	    ;
 
 
-FuncDecl	:	RetType ID LPAREN {parser.newScope(true);} Formals RPAREN PreConditions LBRACE
+FuncDecl	:	RetType ID LPAREN
+            {
+                parser.newScope(true);
+                wrapper.newFunction($2);
+
+            } Formals RPAREN PreConditions LBRACE
             {
                 parser.setCurrentReturnType($1);
                 parser.addFunctionDeclaration($1, $2, $5);
-                wrapper.newFunction($2);
             }
             Statements RBRACE
             {
                 parser.exitScope(true, $2, $7);
+                wrapper.procedureCalleeEnd();
             }
 	        ;
 
@@ -68,8 +73,8 @@ Formals	:	/*epsilon*/
 		|	FormalsList
 		{
             ArgumentList *tl = new ArgumentList();
-            vector<Argument*>& params = *tl->params;
-            vector<Argument*>& params_other = *dynamic_cast<ArgumentList*>($1)->params;
+            vector<Argument*>& params = tl->params;
+            vector<Argument*>& params_other = dynamic_cast<ArgumentList*>($1)->params;
             params = params_other;
 
             $$ = tl;
@@ -80,15 +85,15 @@ FormalsList	:	FormalDecl
             {
                 Argument* arg = static_cast<Argument*>($1);
                 ArgumentList* tl = new ArgumentList();
-                tl->params->push_back(arg);
+                tl->params.push_back(arg);
 
                 $$ = tl;
             }
 			|	FormalDecl COMMA FormalsList
 			{
                 ArgumentList *tl = new ArgumentList();
-                vector<Argument*>& params = *tl->params;
-                vector<Argument*>& params_other = *dynamic_cast<ArgumentList*>($3)->params;
+                vector<Argument*>& params = tl->params;
+                vector<Argument*>& params_other = dynamic_cast<ArgumentList*>($3)->params;
                 params.push_back(dynamic_cast<Argument*>($1));
                 params.insert(params.end(), params_other.begin(), params_other.end());
 
@@ -292,18 +297,18 @@ Call	:	ID LPAREN ExpList RPAREN
 ExpList	:	Exp
         {
             int type = static_cast<Type*>($1)->type;
-            vector<Argument*>* v = new vector<Argument*>();
-            v->push_back(new Argument(NULL, type));
+            vector<Argument*> v;
+            v.push_back(new Argument("", type));
             $$ = new ArgumentList(v);
         }
 		|	Exp COMMA ExpList
 		{
-            vector<Argument*>* v1 = new vector<Argument*>();
+            vector<Argument*> v1;
             int type = static_cast<Type*>($1)->type;
-            v1->push_back(new Argument(NULL, type));
+            v1.push_back(new Argument(NULL, type));
             ArgumentList *tl = new ArgumentList(v1);
-            vector<Argument*>& v = *tl->params;
-            vector<Argument*>& exp = *dynamic_cast<ArgumentList*>($3)->params;
+            vector<Argument*>& v = tl->params;
+            vector<Argument*>& exp = dynamic_cast<ArgumentList*>($3)->params;
             v.insert(v.end(), exp.begin(), exp.end());
 
             $$ = tl
@@ -338,8 +343,7 @@ Exp	:	LPAREN Exp RPAREN
     {
         parser.verifyVariableDefined($1);
         Id* id = static_cast<Id*>($1);
-        wrapper.assignRegisterToID($1);
-        $$ = new Type(parser.getVariableType($1), id->type.reg);
+        $$ = wrapper.assignRegisterToID($1);
     }
 
 	|	Call
@@ -347,10 +351,9 @@ Exp	:	LPAREN Exp RPAREN
 
 	|	NUM
 	{
-        $$ = new Type(NUM);
         int num = dynamic_cast<Num*>($1)->val;
-        Type* dest = static_cast<Type*>($$);
-        dest->reg = utils.intToString(num);
+        Type* dest = new Type(NUM, utils.intToString(num));
+        $$ = dest;
     }
 
 	|	NUM B
@@ -377,14 +380,14 @@ Exp	:	LPAREN Exp RPAREN
 	|	Exp AND M Exp
 	{
 	    parser.verifyType($1, BOOL);
-	    parser.verifyType($3, BOOL);
+	    parser.verifyType($4, BOOL);
         $$ = wrapper.boolAnd($1, $4, $3);
     }
 
 	|	Exp OR M Exp
 	{
 	    parser.verifyType($1, BOOL);
-     	parser.verifyType($3, BOOL);
+     	parser.verifyType($4, BOOL);
         $$ = wrapper.boolOr($1, $4, $3);
     }
 

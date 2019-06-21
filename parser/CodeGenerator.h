@@ -13,6 +13,8 @@
 
 using std::list;
 
+#define START_FUN "__start_main"
+
 class CodeGenerator {
 
 private:
@@ -39,10 +41,10 @@ private:
     }
 
     void procedureCallerAfter(int var_num) {
-        pop("$fp");
-        int real_var_size = 4*var_num;
+        int real_var_size = 4 * var_num;
         string var_num_s = utils.intToString(real_var_size);
-        buffer->emit("addi " + var_num_s + ", $sp");
+        buffer->emit("add $sp, $sp, " + var_num_s);
+        pop("$fp");
     }
 
     void save_callee_registers(){
@@ -55,8 +57,14 @@ private:
         int var_num = parser->scope_var_num * 4;
         string var_num_s = utils.intToString(var_num);
         save_callee_registers();
-        buffer->emit("subi " + var_num_s + ", $sp");
+        buffer->emit("sub $sp, $sp, " + var_num_s);
+        buffer->emit("move $fp, $sp");
     }
+
+public:
+    explicit CodeGenerator(Parser* parser);
+
+    string getFreeRegister();
 
     void procedureCalleeEnd() {
         restore_callee_registers();
@@ -65,14 +73,9 @@ private:
         buffer->emit("jr $ra");
     }
 
-public:
-    explicit CodeGenerator(Parser* parser);
-
-    string getFreeRegister();
-
     void function_call(const string& id, const stack_data* argumentsData){
         const ArgumentList* typesList = dynamic_cast<const ArgumentList*>(argumentsData);
-        const vector<Argument*>& types = *typesList->params;
+        const vector<Argument*>& types = typesList->params;
         vector<string> arguments;
 
         FOR_EACH_CONST(iter, vector<Argument*>, types) {
@@ -95,11 +98,10 @@ public:
         string id = funcId->id;
 
         if (id == "main") {
-            id = "__start"; // Wrap main function
+            id = START_FUN; // Wrap main function
         }
         buffer->emit(id + ":");
         procedureCalleeStart();
-        procedureCalleeEnd();
     }
 
     void freeRegister(const string& name);
@@ -108,7 +110,7 @@ public:
 
     string getRegisterIfMemory(Type* t);
 
-    void assignRegisterToID(stack_data* idData);
+    Type* assignRegisterToID(stack_data* idData);
 
     CodeBuffer * buf();
 
