@@ -50,7 +50,7 @@ void deriveProgramAndExit() {
     parser.verifyMainFunction();
     parser.exitLastScope();
     wrapper.emitMain();
-    wrapper.printCodeBuffer();
+    wrapper.printBuffer();
     exit(0);
 }
 

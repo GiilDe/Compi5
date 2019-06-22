@@ -10,7 +10,8 @@ CodeGenerator::CodeGenerator(Parser* parser) :
         utils(),
         relop_map(),
         binop_map(),
-        zdiv_check_counter(0) {
+        zdiv_check_counter(0),
+        str_count(0) {
 
     for (int i = 0; i <= 7; ++i) {
         string num = utils.intToString(i);
@@ -34,6 +35,9 @@ CodeGenerator::CodeGenerator(Parser* parser) :
 
     buffer->emit(".globl main");
     buffer->emit(".ent main");
+
+    emitPrint();
+    emitPrinti();
 }
 
 
@@ -58,13 +62,13 @@ void CodeGenerator::li(const string &dest, const string &num) {
 }
 
 void CodeGenerator::push(const string &src) {
-    mov("0($sp)", src);
     buffer->emit("sub $sp, $sp, 4");
+    mov("0($sp)", src);
 }
 
 void CodeGenerator::pop(const string& dest) {
+    buffer->emit("lw " + dest + ", 0($sp)");
     buffer->emit("add $sp, $sp, 4");
-    buffer->emit("lw " + dest + ", " +"0($sp)");
 }
 
 void CodeGenerator::mov(const string &dest, const string &src) {
@@ -85,6 +89,8 @@ void CodeGenerator::mov(const string &dest, const string &src) {
 
 Type* CodeGenerator::binop(int destType, stack_data *rSrcData, stack_data *srcData, stack_data* binopData) {
     Type* dest = new Type(destType);
+    dest->reg = getFreeRegister();
+
     Type* Rsrc = dynamic_cast<Type*>(rSrcData);
     Type* src = dynamic_cast<Type*>(srcData);
     Binop* binop = dynamic_cast<Binop*>(binopData);
@@ -93,7 +99,7 @@ Type* CodeGenerator::binop(int destType, stack_data *rSrcData, stack_data *srcDa
     string sRsrc = Rsrc->reg;
     string ssrc = src->reg;
 
-    if (isFromMemory(sdest) || sdest == "") {
+    if (isFromMemory(sdest)) {
         sdest = getFreeRegister();
     }
     if (isFromMemory(sRsrc)) {
@@ -269,7 +275,8 @@ CodeBuffer *CodeGenerator::buf() {
     return buffer;
 }
 
-void CodeGenerator::printCodeBuffer() {
+void CodeGenerator::printBuffer() {
+    buffer->printDataBuffer();
     buffer->printCodeBuffer();
 }
 
@@ -283,6 +290,18 @@ void CodeGenerator::doAssignOp(stack_data *expTypeData, stack_data *idData, int 
     } else {
         boolAssignment(dest, expType);
     }
+}
+
+Type* CodeGenerator::newString(const string &val) {
+    // Add string to data section
+    string label = "str" + utils.intToString(str_count);
+    buffer->emitData(label + ": .asciiz " + val);
+
+    string reg = getFreeRegister();
+    buffer->emit("la " + reg + ", " + label);
+
+    str_count++;
+    return new Type(STRING, reg);
 }
 
 void CodeGenerator::emitZeroDivisionCheck(const string& src) {

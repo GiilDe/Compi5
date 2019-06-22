@@ -1912,7 +1912,7 @@ yyreduce:
 
   case 59:
 #line 366 "/Users/miki/Desktop/Compilation/hw5/parser.ypp"
-    { (yyval) = new Type(STRING); ;}
+    { (yyval) = wrapper.newString(dynamic_cast<Id*>((yyvsp[(1) - (1)]))->id); ;}
     break;
 
   case 60:

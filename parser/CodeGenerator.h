@@ -32,11 +32,15 @@ private:
      */
     int zdiv_check_counter;
 
+    int str_count;
+
     void procedureCallerBefore(const string& id, const vector<string>& arguments) {
+        push("$fp");
+        buffer->emit("sw $ra, 0($sp)");
+        buffer->emit("sub $sp, $sp, 4");
         for (int i = 0; i < arguments.size(); ++i) {
             push(arguments[i]);
         }
-        push("$fp");
         buffer->emit("jal " + id);
     }
 
@@ -54,11 +58,30 @@ private:
     }
 
     void procedureCalleeStart() {
+        // Backup
         int var_num = parser->scope_var_num * 4;
-        string var_num_s = utils.intToString(var_num);
         save_callee_registers();
-        buffer->emit("sub $sp, $sp, " + var_num_s);
+        if (var_num > 0) {
+            string var_num_s = utils.intToString(var_num);
+            buffer->emit("sub $sp, $sp, " + var_num_s);
+        }
         buffer->emit("move $fp, $sp");
+    }
+
+    void emitPrint() {
+        buffer->emit("print:");
+        buffer->emit("lw $a0, 0($sp)");
+        buffer->emit("li $v0, 1");
+        buffer->emit("syscall");
+        buffer->emit("jr $ra");
+    }
+
+    void emitPrinti() {
+        buffer->emit("printi:");
+        buffer->emit("lw $a0, 0($sp)");
+        buffer->emit("li $v0, 4");
+        buffer->emit("syscall");
+        buffer->emit("jr $ra");
     }
 
 public:
@@ -69,8 +92,9 @@ public:
     void procedureCalleeEnd() {
         restore_callee_registers();
         buffer->emit("move $sp, $fp");
-        pop("$ra");
         buffer->emit("jr $ra");
+        buffer->emit("add $sp, $sp, 4");
+        buffer->emit("lw $ra, 0($sp)");
     }
 
     void function_call(const string& id, const stack_data* argumentsData){
@@ -82,9 +106,10 @@ public:
             const Argument* arg = *iter;
             pair<int, int> varData = parser->getVariable(arg->id);
             if (varData.first == -1) {
-                // Not a variable, so probably an expression
+                // Not a variable, so probably an expressionw
             }
             int offset = varData.second;
+            arguments.push_back(utils.intToString(offset * 4) + "($fp)");
         }
 
         procedureCallerBefore(id, arguments);
@@ -114,7 +139,7 @@ public:
 
     CodeBuffer * buf();
 
-    void printCodeBuffer();
+    void printBuffer();
 
     void lw(const string& reg /*dest*/, const string& src);
 
@@ -147,6 +172,8 @@ public:
     void boolAssignment(const string& dest, Type *t);
 
     void doAssignOp(stack_data* expTypeData, stack_data* idData, int type);
+
+    Type* newString(const string& val);
 
     void procedure();
 

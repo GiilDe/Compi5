@@ -80,7 +80,7 @@ continue                        return CONTINUE;
                                     return NUM;
                                 }
 \"([^\n\r\"\\]|\\[rnt"\\])+\"   {
-                                    yylval = new Type(STRING);
+                                    yylval = new Id(yytext);
                                     return STRING;
                                 }
 
