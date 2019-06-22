@@ -231,10 +231,11 @@ void CodeGenerator::freeRegister(const string &name) {
 
 bool CodeGenerator::isFromMemory(const string &name) {
     return name.size() > 1
-           && name.at(1) != 's'
-           && name.at(1) != 't'
-           && name != "$fp"
-           && !utils.isNumber(name);
+            && name.at(1) != 's'
+            && name.at(1) != 't'
+            && name != "$fp"
+            && name != "$ra"
+            && !utils.isNumber(name);
 }
 
 string CodeGenerator::getRegisterIfMemory(Type *t) {
@@ -302,6 +303,12 @@ Type* CodeGenerator::newString(const string &val) {
 
     str_count++;
     return new Type(STRING, reg);
+}
+
+void CodeGenerator::doReturn(stack_data *retExp) {
+    Type * retType = dynamic_cast<Type*>(retExp);
+    parser->verifyReturn(retType->type);
+    mov("$v0", retType->reg);
 }
 
 void CodeGenerator::emitZeroDivisionCheck(const string& src) {

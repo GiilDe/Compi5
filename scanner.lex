@@ -1,18 +1,16 @@
 %{
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include "output.hpp"
-#include "source.hpp"
-#include "parser.tab.hpp"
-#include <sstream>
+    #include <stdio.h>
+    #include <stdlib.h>
+    #include <string.h>
+    #include "output.hpp"
+    #include "source.hpp"
+    #include "parser.tab.hpp"
+    #include <sstream>
 
-
-static void error(char * c_name) {
-  printf("Error %s\n", c_name);
-  exit(0);
-}
-
+    static void error(char * c_name) {
+      printf("Error %s\n", c_name);
+      exit(0);
+    }
 %}
 
 %option yylineno

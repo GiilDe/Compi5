@@ -9,8 +9,8 @@
 #include <map>
 #include <string>
 #include <sstream>
-#include "../parser.tab.hpp"
-#include "../source.hpp"
+#include "parser.tab.hpp"
+#include "source.hpp"
 
 using namespace std;
 

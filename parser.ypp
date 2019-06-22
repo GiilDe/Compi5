@@ -1,5 +1,57 @@
 %{
-    #include "parser.h"
+    #include <iostream>
+    #include <utility>
+    #include <vector>
+    #include <stack>
+    #include <map>
+    #include <set>
+    #include <string>
+    #include <algorithm>
+    #include <iostream>
+    #include <sstream>
+    #include <cstdarg>
+    #include <list>
+    #include "source.hpp"
+    #include "output.hpp"
+    #include "bp.hpp"
+    #include "CodeGenerator.h"
+
+    #define tokens yytokentype
+    #define YYERROR_VERBOSE 1
+
+    #define code_buffer wrapper.buf()
+
+    using namespace std;
+    using namespace output;
+
+    /**
+     * External lexical analyzer function
+     */
+    extern int yylex();
+
+    /**
+     * External parser function
+     */
+    extern int yyparse();
+
+    extern int yydebug;
+
+    Utils utils;
+    Parser parser(utils);
+    CodeGenerator wrapper(&parser);
+
+    void yyerror(const char *err) {
+        WRAP_ERROR(errorSyn(yylineno));
+    }
+
+    int main() {
+
+    //#ifdef YYDEBUG
+    //    yydebug = 1;
+    //#endif
+
+        return yyparse();
+    }
 %}
 
 %token            VOID
@@ -35,7 +87,14 @@
 
 %%
 
-Program	:	Funcs EF { deriveProgramAndExit(); }
+Program	:	Funcs EF
+        {
+            parser.verifyMainFunction();
+            parser.exitLastScope();
+            wrapper.emitMain();
+            wrapper.printBuffer();
+            exit(0);
+        }
         ;
 
 Funcs	:	/*epsilon*/
@@ -256,17 +315,10 @@ Simple_statement:  LBRACE { parser.newScope(false); } Statements RBRACE
                 | Call SC
 
                 | RETURN SC
-                {
-                    parser.verifyReturn(VOID);
-                    int type = static_cast<int>(VOID);
-                }
+                { parser.verifyReturn(VOID); }
 
                 | RETURN Exp SC
-                {
-                    int type = static_cast<Type*>($2)->type;
-                    parser.verifyReturn(type);
-
-                }
+                { wrapper.doReturn($2); }
 
                 | BREAK SC
                 {

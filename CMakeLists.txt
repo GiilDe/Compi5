@@ -23,4 +23,4 @@ ADD_FLEX_BISON_DEPENDENCY(Lexer Parser)
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
 
 ADD_EXECUTABLE(hw5 ${BISON_Parser_OUTPUTS} ${FLEX_Lexer_OUTPUTS}
-        bp.cpp source.hpp parser.h lexer.cpp output.cpp parser/Utils.cpp parser/Utils.h parser/Parser.cpp parser/Parser.h parser/CodeGenerator.cpp parser/CodeGenerator.h)
+        bp.cpp source.hpp output.cpp Utils.cpp Utils.h Parser.cpp Parser.h CodeGenerator.cpp CodeGenerator.h)

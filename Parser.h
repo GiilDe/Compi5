@@ -5,7 +5,7 @@
 #ifndef COMPI5_PARSER_H
 #define COMPI5_PARSER_H
 
-#include "../output.hpp"
+#include "output.hpp"
 #include "Utils.h"
 #include <utility>
 #include <vector>

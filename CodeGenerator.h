@@ -6,7 +6,7 @@
 #define COMPI5_CODEGENERATOR_H
 
 
-#include "../bp.hpp"
+#include "bp.hpp"
 #include "Utils.h"
 #include "Parser.h"
 #include <list>
@@ -33,23 +33,6 @@ private:
     int zdiv_check_counter;
 
     int str_count;
-
-    void procedureCallerBefore(const string& id, const vector<string>& arguments) {
-        push("$fp");
-        buffer->emit("sw $ra, 0($sp)");
-        buffer->emit("sub $sp, $sp, 4");
-        for (int i = 0; i < arguments.size(); ++i) {
-            push(arguments[i]);
-        }
-        buffer->emit("jal " + id);
-    }
-
-    void procedureCallerAfter(int var_num) {
-        int real_var_size = 4 * var_num;
-        string var_num_s = utils.intToString(real_var_size);
-        buffer->emit("add $sp, $sp, " + var_num_s);
-        pop("$fp");
-    }
 
     void save_callee_registers(){
     }
@@ -112,10 +95,28 @@ public:
             arguments.push_back(utils.intToString(offset * 4) + "($fp)");
         }
 
-        procedureCallerBefore(id, arguments);
-//        procedureCalleeStart();
-//        procedureCalleeEnd();
-        procedureCallerAfter(arguments.size());
+        // Save previous frame pointer
+        push("$fp");
+        // Save previous return address
+        push("$ra");
+
+        for (int i = 0; i < arguments.size(); ++i) {
+            push(arguments[i]);
+        }
+
+        // Jump to procedure
+        buffer->emit("jal " + id);
+
+        int real_var_size = 4 * arguments.size();
+        if (real_var_size > 0) {
+            string var_num_s = utils.intToString(real_var_size);
+            buffer->emit("add $sp, $sp, " + var_num_s);
+        }
+
+        // Restore return address
+        pop("$ra");
+        // Restore frame pointer
+        pop("$fp");
     }
 
     void newFunction(stack_data* funcIdData) {
@@ -174,6 +175,8 @@ public:
     void doAssignOp(stack_data* expTypeData, stack_data* idData, int type);
 
     Type* newString(const string& val);
+
+    void doReturn(stack_data* retExp);
 
     void procedure();
 
