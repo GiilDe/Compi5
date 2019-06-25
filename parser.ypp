@@ -302,7 +302,7 @@ Simple_statement:  LBRACE { parser.newScope(false); } Statements RBRACE
                 {
                     Exp* expType = dynamic_cast<Exp*>($4);
                     Type *t1 = dynamic_cast<Type*>($1);
-                    parser.verifyType($1, expType->type->type);
+                    parser.verifyType($4, expType->type->type);
                     parser.tryAddVariable($1, $2, false);
                     wrapper.doAssignOp($4, $2, t1->type);
                 }
