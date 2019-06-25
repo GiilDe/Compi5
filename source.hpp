@@ -11,6 +11,31 @@
 
 using namespace std;
 
+class Register {
+private:
+    bool free;
+
+public:
+    string name;
+
+    Register(const string& name) : free(true), name(name) {}
+    void acquire() {
+        free = false;
+    }
+
+    void release() {
+        free = true;
+    }
+
+    bool isFree() {
+        return free;
+    }
+
+    string getName() const {
+        return name;
+    }
+};
+
 class stack_data {
 public:
     virtual ~stack_data(){};
@@ -43,12 +68,12 @@ class Type : public stack_data {
 public:
     bool bool_exp;
     int type;
-    string reg;
+    Register reg;
     vector<int> true_list;
     vector<int> false_list;
     vector<int> exit_list;
 
-    explicit Type(int type) : type(type), reg(), bool_exp(false) {}
+    explicit Type(int type) : type(type), reg(""), bool_exp(false) {}
     Type(int type, string reg) : type(type), reg(reg), bool_exp(false){}
     Type(Type& t) : type(t.type), reg(t.reg), bool_exp(false){}
     Type() : type(0), reg(""), bool_exp(false) {}
@@ -65,19 +90,20 @@ public:
             type(type) {}
 };
 
-class Argument: public stack_data {
+class Exp: public stack_data {
 public:
-    string id;
-    int type;
+    Id* id;
+    Type* type;
 
-    Argument(const string& id, int type): id(id), type(type) {}
+    Exp(Type *type) : id(NULL), type(type) {}
+    Exp(Id* id, Type* type) : id(id), type(type) {}
 };
 
 class ArgumentList : public stack_data {
 public:
-    vector<Argument*> params;
+    vector<Exp*> params;
     ArgumentList() : params(){}
-    explicit ArgumentList(const vector<Argument*>& vector) : params(vector){}
+    explicit ArgumentList(const vector<Exp*>& vector) : params(vector){}
 };
 
 class Preconditions : public stack_data{
@@ -85,8 +111,6 @@ public:
     int preconditions_num;
     explicit Preconditions(int num) : preconditions_num(num){}
 };
-
-
 
 #define YYSTYPE stack_data*
 

@@ -134,7 +134,7 @@
 
 
 /* Copy the first part of user declarations.  */
-#line 1 "parser.ypp"
+#line 1 "/Users/miki/Desktop/Compilation/hw5/parser.ypp"
 
     #include <iostream>
     #include <utility>
@@ -222,7 +222,7 @@ typedef int YYSTYPE;
 
 
 /* Line 216 of yacc.c.  */
-#line 226 "parser.tab.cpp"
+#line 226 "/Users/miki/Desktop/Compilation/hw5/parser.tab.cpp"
 
 #ifdef short
 # undef short
@@ -535,10 +535,10 @@ static const yytype_uint16 yyrline[] =
        0,    90,    90,   100,   101,   106,   111,   105,   122,   125,
      130,   132,   143,   151,   163,   174,   175,   182,   182,   186,
      187,   190,   191,   194,   204,   214,   222,   237,   238,   246,
-     261,   261,   271,   278,   278,   278,   292,   292,   295,   300,
-     309,   315,   317,   320,   323,   329,   333,   342,   350,   357,
-     371,   374,   377,   381,   384,   395,   402,   405,   412,   418,
-     421,   424,   427,   433,   440,   447,   455,   456
+     261,   261,   271,   278,   278,   278,   292,   292,   295,   301,
+     310,   316,   318,   321,   324,   331,   335,   347,   361,   368,
+     382,   385,   388,   392,   395,   406,   413,   416,   423,   429,
+     432,   435,   438,   444,   451,   458,   466,   467
 };
 #endif
 
@@ -1545,7 +1545,7 @@ yyreduce:
   switch (yyn)
     {
         case 2:
-#line 91 "parser.ypp"
+#line 91 "/Users/miki/Desktop/Compilation/hw5/parser.ypp"
     {
             parser.verifyMainFunction();
             parser.exitLastScope();
@@ -1556,7 +1556,7 @@ yyreduce:
     break;
 
   case 5:
-#line 106 "parser.ypp"
+#line 106 "/Users/miki/Desktop/Compilation/hw5/parser.ypp"
     {
                 parser.newScope(true);
                 wrapper.newFunction((yyvsp[(2) - (3)]));
@@ -1565,7 +1565,7 @@ yyreduce:
     break;
 
   case 6:
-#line 111 "parser.ypp"
+#line 111 "/Users/miki/Desktop/Compilation/hw5/parser.ypp"
     {
                 parser.setCurrentReturnType((yyvsp[(1) - (8)]));
                 parser.addFunctionDeclaration((yyvsp[(1) - (8)]), (yyvsp[(2) - (8)]), (yyvsp[(5) - (8)]));
@@ -1573,7 +1573,7 @@ yyreduce:
     break;
 
   case 7:
-#line 116 "parser.ypp"
+#line 116 "/Users/miki/Desktop/Compilation/hw5/parser.ypp"
     {
                 parser.exitScope(true, (yyvsp[(2) - (11)]), (yyvsp[(7) - (11)]));
                 wrapper.procedureCalleeEnd();
@@ -1581,26 +1581,26 @@ yyreduce:
     break;
 
   case 8:
-#line 123 "parser.ypp"
+#line 123 "/Users/miki/Desktop/Compilation/hw5/parser.ypp"
     { (yyval) = new Type(static_cast<Type*>((yyvsp[(1) - (1)]))->type); ;}
     break;
 
   case 9:
-#line 126 "parser.ypp"
+#line 126 "/Users/miki/Desktop/Compilation/hw5/parser.ypp"
     { (yyval) = new Type(VOID); ;}
     break;
 
   case 10:
-#line 130 "parser.ypp"
+#line 130 "/Users/miki/Desktop/Compilation/hw5/parser.ypp"
     { (yyval) = new ArgumentList(); ;}
     break;
 
   case 11:
-#line 133 "parser.ypp"
+#line 133 "/Users/miki/Desktop/Compilation/hw5/parser.ypp"
     {
             ArgumentList *tl = new ArgumentList();
-            vector<Argument*>& params = tl->params;
-            vector<Argument*>& params_other = dynamic_cast<ArgumentList*>((yyvsp[(1) - (1)]))->params;
+            vector<Exp*>& params = tl->params;
+            vector<Exp*>& params_other = dynamic_cast<ArgumentList*>((yyvsp[(1) - (1)]))->params;
             params = params_other;
 
             (yyval) = tl;
@@ -1608,9 +1608,9 @@ yyreduce:
     break;
 
   case 12:
-#line 144 "parser.ypp"
+#line 144 "/Users/miki/Desktop/Compilation/hw5/parser.ypp"
     {
-                Argument* arg = static_cast<Argument*>((yyvsp[(1) - (1)]));
+                Exp* arg = dynamic_cast<Exp*>((yyvsp[(1) - (1)]));
                 ArgumentList* tl = new ArgumentList();
                 tl->params.push_back(arg);
 
@@ -1619,12 +1619,12 @@ yyreduce:
     break;
 
   case 13:
-#line 152 "parser.ypp"
+#line 152 "/Users/miki/Desktop/Compilation/hw5/parser.ypp"
     {
                 ArgumentList *tl = new ArgumentList();
-                vector<Argument*>& params = tl->params;
-                vector<Argument*>& params_other = dynamic_cast<ArgumentList*>((yyvsp[(3) - (3)]))->params;
-                params.push_back(dynamic_cast<Argument*>((yyvsp[(1) - (3)])));
+                vector<Exp*>& params = tl->params;
+                vector<Exp*>& params_other = dynamic_cast<ArgumentList*>((yyvsp[(3) - (3)]))->params;
+                params.push_back(dynamic_cast<Exp*>((yyvsp[(1) - (3)])));
                 params.insert(params.end(), params_other.begin(), params_other.end());
 
                 (yyval) = tl;
@@ -1632,23 +1632,23 @@ yyreduce:
     break;
 
   case 14:
-#line 164 "parser.ypp"
+#line 164 "/Users/miki/Desktop/Compilation/hw5/parser.ypp"
     {
                 parser.tryAddVariable((yyvsp[(1) - (2)]), (yyvsp[(2) - (2)]), true);
                 Id* id = dynamic_cast<Id*>((yyvsp[(2) - (2)]));
                 Type* t = dynamic_cast<Type*>((yyvsp[(1) - (2)]));
-                Argument* arg = new Argument(id->id, t->type);
+                Exp* arg = new Exp(id, t);
                 (yyval) = arg;
 	        ;}
     break;
 
   case 15:
-#line 174 "parser.ypp"
+#line 174 "/Users/miki/Desktop/Compilation/hw5/parser.ypp"
     { (yyval) = new Preconditions(0); ;}
     break;
 
   case 16:
-#line 176 "parser.ypp"
+#line 176 "/Users/miki/Desktop/Compilation/hw5/parser.ypp"
     {
 				    int num = static_cast<Preconditions*>((yyvsp[(1) - (2)]))->preconditions_num;
 				    (yyval) = new Preconditions(num + 1);
@@ -1656,21 +1656,21 @@ yyreduce:
     break;
 
   case 17:
-#line 182 "parser.ypp"
+#line 182 "/Users/miki/Desktop/Compilation/hw5/parser.ypp"
     {parser.verifyType((yyvsp[(3) - (3)]), BOOL);;}
     break;
 
   case 18:
-#line 183 "parser.ypp"
+#line 183 "/Users/miki/Desktop/Compilation/hw5/parser.ypp"
     {(yyval) = new Preconditions(0);;}
     break;
 
   case 23:
-#line 195 "parser.ypp"
+#line 195 "/Users/miki/Desktop/Compilation/hw5/parser.ypp"
     {
                     string after_if_label = code_buffer->genLabel();
                     string label_true = dynamic_cast<Label*>((yyvsp[(2) - (3)]))->label;
-                    Type* t = dynamic_cast<Type*>((yyvsp[(1) - (3)]));
+                    Type* t = dynamic_cast<Exp*>((yyvsp[(1) - (3)]))->type;
                     code_buffer->bpatch(t->true_list, label_true);
                     code_buffer->bpatch(t->false_list, after_if_label);
                     parser.exitScope(false, NULL, NULL);
@@ -1678,11 +1678,11 @@ yyreduce:
     break;
 
   case 24:
-#line 205 "parser.ypp"
+#line 205 "/Users/miki/Desktop/Compilation/hw5/parser.ypp"
     {
                     string after_if_label = code_buffer->genLabel();
                     string label_true = dynamic_cast<Label*>((yyvsp[(2) - (3)]))->label;
-                    Type* t = dynamic_cast<Type*>((yyvsp[(1) - (3)]));
+                    Type* t = dynamic_cast<Exp*>((yyvsp[(1) - (3)]))->type;
                     code_buffer->bpatch(t->true_list, label_true);
                     code_buffer->bpatch(t->false_list, after_if_label);
                     parser.exitScope(false, NULL, NULL);
@@ -1690,9 +1690,9 @@ yyreduce:
     break;
 
   case 25:
-#line 215 "parser.ypp"
+#line 215 "/Users/miki/Desktop/Compilation/hw5/parser.ypp"
     {
-                    Type *t = dynamic_cast<Type*>((yyvsp[(1) - (2)]));
+                    Type *t = dynamic_cast<Exp*>((yyvsp[(1) - (2)]))->type;
                     string exit_label = code_buffer->genLabel();
                     code_buffer->bpatch(t->exit_list, exit_label);
                     parser.exitScope(false, NULL, NULL);
@@ -1700,7 +1700,7 @@ yyreduce:
     break;
 
   case 26:
-#line 223 "parser.ypp"
+#line 223 "/Users/miki/Desktop/Compilation/hw5/parser.ypp"
     {
                     parser.outWhile();
                     parser.exitScope(false, NULL, NULL);
@@ -1716,9 +1716,9 @@ yyreduce:
     break;
 
   case 28:
-#line 239 "parser.ypp"
+#line 239 "/Users/miki/Desktop/Compilation/hw5/parser.ypp"
     {
-                    Type *t = dynamic_cast<Type*>((yyvsp[(1) - (2)]));
+                    Type *t = dynamic_cast<Exp*>((yyvsp[(1) - (2)]))->type;
                     string exit_label = code_buffer->genLabel();
                     code_buffer->bpatch(t->exit_list, exit_label);
                     parser.exitScope(false, NULL, NULL);
@@ -1726,7 +1726,7 @@ yyreduce:
     break;
 
   case 29:
-#line 247 "parser.ypp"
+#line 247 "/Users/miki/Desktop/Compilation/hw5/parser.ypp"
     {
                     parser.outWhile();
                     parser.exitScope(false, NULL, NULL);
@@ -1742,12 +1742,12 @@ yyreduce:
     break;
 
   case 30:
-#line 261 "parser.ypp"
+#line 261 "/Users/miki/Desktop/Compilation/hw5/parser.ypp"
     { parser.inWhile(); ;}
     break;
 
   case 31:
-#line 262 "parser.ypp"
+#line 262 "/Users/miki/Desktop/Compilation/hw5/parser.ypp"
     {
     parser.verifyType((yyvsp[(5) - (6)]), BOOL);
     parser.newScope(false);
@@ -1759,7 +1759,7 @@ yyreduce:
     break;
 
   case 32:
-#line 272 "parser.ypp"
+#line 272 "/Users/miki/Desktop/Compilation/hw5/parser.ypp"
     {
     parser.verifyType((yyvsp[(3) - (4)]), BOOL);
     parser.newScope(false);
@@ -1768,61 +1768,62 @@ yyreduce:
     break;
 
   case 33:
-#line 278 "parser.ypp"
+#line 278 "/Users/miki/Desktop/Compilation/hw5/parser.ypp"
     {parser.exitScope(false, NULL, NULL);;}
     break;
 
   case 34:
-#line 278 "parser.ypp"
+#line 278 "/Users/miki/Desktop/Compilation/hw5/parser.ypp"
     { parser.newScope(false); ;}
     break;
 
   case 35:
-#line 279 "parser.ypp"
+#line 279 "/Users/miki/Desktop/Compilation/hw5/parser.ypp"
     {
     string label_true = dynamic_cast<Label*>((yyvsp[(2) - (8)]))->label;
     string label_false = dynamic_cast<Label*>((yyvsp[(8) - (8)]))->label;
-    Type* if_exp = dynamic_cast<Type*>((yyvsp[(1) - (8)]));
+    Type* if_exp = dynamic_cast<Exp*>((yyvsp[(1) - (8)]))->type;
     code_buffer->bpatch(if_exp->true_list, label_true);
     code_buffer->bpatch(if_exp->false_list, label_false);
 
     int exit_address = dynamic_cast<Num*>((yyvsp[(4) - (8)]))->val;
-    (yyval) = new Type();
-    Type* t = dynamic_cast<Type*>((yyval));
+    Type* t = new Type();
     t->exit_list.push_back(exit_address);
+    (yyval) = new Exp(t);
 ;}
     break;
 
   case 36:
-#line 292 "parser.ypp"
+#line 292 "/Users/miki/Desktop/Compilation/hw5/parser.ypp"
     { parser.newScope(false); ;}
     break;
 
   case 37:
-#line 293 "parser.ypp"
+#line 293 "/Users/miki/Desktop/Compilation/hw5/parser.ypp"
     { parser.exitScope(false, NULL, NULL); ;}
     break;
 
   case 38:
-#line 296 "parser.ypp"
+#line 296 "/Users/miki/Desktop/Compilation/hw5/parser.ypp"
     {
                     parser.tryAddVariable((yyvsp[(1) - (3)]), (yyvsp[(2) - (3)]), false);
+                    wrapper.doAssignOp(NULL, (yyvsp[(2) - (3)]), parser.getVariableType((yyvsp[(2) - (3)])));
                 ;}
     break;
 
   case 39:
-#line 301 "parser.ypp"
+#line 302 "/Users/miki/Desktop/Compilation/hw5/parser.ypp"
     {
-                    Type* expType = dynamic_cast<Type*>((yyvsp[(4) - (5)]));
+                    Exp* expType = dynamic_cast<Exp*>((yyvsp[(4) - (5)]));
                     Type *t1 = dynamic_cast<Type*>((yyvsp[(1) - (5)]));
-                    parser.verifyType((yyvsp[(1) - (5)]), expType->type);
+                    parser.verifyType((yyvsp[(1) - (5)]), expType->type->type);
                     parser.tryAddVariable((yyvsp[(1) - (5)]), (yyvsp[(2) - (5)]), false);
                     wrapper.doAssignOp((yyvsp[(4) - (5)]), (yyvsp[(2) - (5)]), t1->type);
                 ;}
     break;
 
   case 40:
-#line 310 "parser.ypp"
+#line 311 "/Users/miki/Desktop/Compilation/hw5/parser.ypp"
     {
                     parser.verifyIdType((yyvsp[(1) - (4)]), (yyvsp[(3) - (4)]));
                     parser.verifyVariableDefined((yyvsp[(1) - (4)]));
@@ -1831,95 +1832,105 @@ yyreduce:
     break;
 
   case 42:
-#line 318 "parser.ypp"
+#line 319 "/Users/miki/Desktop/Compilation/hw5/parser.ypp"
     { parser.verifyReturn(VOID); ;}
     break;
 
   case 43:
-#line 321 "parser.ypp"
+#line 322 "/Users/miki/Desktop/Compilation/hw5/parser.ypp"
     { wrapper.doReturn((yyvsp[(2) - (3)])); ;}
     break;
 
   case 44:
-#line 324 "parser.ypp"
+#line 325 "/Users/miki/Desktop/Compilation/hw5/parser.ypp"
     {
                     parser.verifyBreak();
                     (yyval) = new Type(static_cast<int>(VOID));
+
                 ;}
     break;
 
   case 45:
-#line 330 "parser.ypp"
+#line 332 "/Users/miki/Desktop/Compilation/hw5/parser.ypp"
     { parser.verifyContinue(); ;}
     break;
 
   case 46:
-#line 334 "parser.ypp"
+#line 336 "/Users/miki/Desktop/Compilation/hw5/parser.ypp"
     {
                 parser.verifyFunctionDefined((yyvsp[(1) - (4)]));
-                (yyval) = new Type(parser.getFunctionReturnType((yyvsp[(1) - (4)])));
+                Type *funcType = new Type(parser.getFunctionReturnType((yyvsp[(1) - (4)])));
+                Id *funcId = dynamic_cast<Id*>((yyvsp[(1) - (4)]));
                 parser.verifyRightParams((yyvsp[(1) - (4)]), (yyvsp[(3) - (4)]));
-                string id = dynamic_cast<Id*>((yyvsp[(1) - (4)]))->id;
-                wrapper.function_call(id, (yyvsp[(3) - (4)]))
+                Exp* funcExp = new Exp(funcId, funcType);
+                wrapper.function_call(funcExp, (yyvsp[(3) - (4)]));
+
+                (yyval) = funcExp;
             ;}
     break;
 
   case 47:
-#line 343 "parser.ypp"
+#line 348 "/Users/miki/Desktop/Compilation/hw5/parser.ypp"
     {
 		        parser.verifyFunctionDefined((yyvsp[(1) - (3)]));
-		        (yyval) = new Type(parser.getFunctionReturnType((yyvsp[(1) - (3)])));
-                parser.verifyRightParams((yyvsp[(1) - (3)]), new ArgumentList());
+		        Type *funcType = new Type(parser.getFunctionReturnType((yyvsp[(1) - (3)])));
+                Id *funcId = dynamic_cast<Id*>((yyvsp[(1) - (3)]));
+                ArgumentList * l = new ArgumentList();
+                parser.verifyRightParams((yyvsp[(1) - (3)]), l);
+                Exp* funcExp = new Exp(funcId, funcType);
+                wrapper.function_call(funcExp, l);
+
+                (yyval) = funcExp;
 		    ;}
     break;
 
   case 48:
-#line 351 "parser.ypp"
+#line 362 "/Users/miki/Desktop/Compilation/hw5/parser.ypp"
     {
-            int type = static_cast<Type*>((yyvsp[(1) - (1)]))->type;
-            vector<Argument*> v;
-            v.push_back(new Argument("", type));
+            Exp* exp = dynamic_cast<Exp*>((yyvsp[(1) - (1)]));
+            vector<Exp*> v;
+            v.push_back(exp);
             (yyval) = new ArgumentList(v);
         ;}
     break;
 
   case 49:
-#line 358 "parser.ypp"
+#line 369 "/Users/miki/Desktop/Compilation/hw5/parser.ypp"
     {
-            vector<Argument*> v1;
-            int type = static_cast<Type*>((yyvsp[(1) - (3)]))->type;
-            v1.push_back(new Argument(NULL, type));
+            vector<Exp*> v1;
+            Exp* expData = dynamic_cast<Exp*>((yyvsp[(1) - (3)]));
+            v1.push_back(expData);
             ArgumentList *tl = new ArgumentList(v1);
-            vector<Argument*>& v = tl->params;
-            vector<Argument*>& exp = dynamic_cast<ArgumentList*>((yyvsp[(3) - (3)]))->params;
+            vector<Exp*>& v = tl->params;
+            vector<Exp*>& exp = dynamic_cast<ArgumentList*>((yyvsp[(3) - (3)]))->params;
             v.insert(v.end(), exp.begin(), exp.end());
 
-            (yyval) = tl
+            (yyval) = tl;
 		;}
     break;
 
   case 50:
-#line 372 "parser.ypp"
+#line 383 "/Users/miki/Desktop/Compilation/hw5/parser.ypp"
     { (yyval) = new Type(INT); ;}
     break;
 
   case 51:
-#line 375 "parser.ypp"
+#line 386 "/Users/miki/Desktop/Compilation/hw5/parser.ypp"
     { (yyval) = new Type(BYTE); ;}
     break;
 
   case 52:
-#line 378 "parser.ypp"
+#line 389 "/Users/miki/Desktop/Compilation/hw5/parser.ypp"
     { (yyval) = new Type(BOOL); ;}
     break;
 
   case 53:
-#line 382 "parser.ypp"
-    { (yyval) = (yyvsp[(2) - (3)]) ;}
+#line 393 "/Users/miki/Desktop/Compilation/hw5/parser.ypp"
+    { (yyval) = (yyvsp[(2) - (3)]); ;}
     break;
 
   case 54:
-#line 385 "parser.ypp"
+#line 396 "/Users/miki/Desktop/Compilation/hw5/parser.ypp"
     {
         int t1 = parser.verifyTypes((yyvsp[(1) - (3)]), 3, NUM, BYTE, INT);
         int t2 = parser.verifyTypes((yyvsp[(3) - (3)]), 3, NUM, BYTE, INT);
@@ -1932,7 +1943,7 @@ yyreduce:
     break;
 
   case 55:
-#line 396 "parser.ypp"
+#line 407 "/Users/miki/Desktop/Compilation/hw5/parser.ypp"
     {
         parser.verifyVariableDefined((yyvsp[(1) - (1)]));
         Id* id = static_cast<Id*>((yyvsp[(1) - (1)]));
@@ -1941,44 +1952,44 @@ yyreduce:
     break;
 
   case 56:
-#line 403 "parser.ypp"
+#line 414 "/Users/miki/Desktop/Compilation/hw5/parser.ypp"
     { (yyval) = (yyvsp[(1) - (1)]); ;}
     break;
 
   case 57:
-#line 406 "parser.ypp"
+#line 417 "/Users/miki/Desktop/Compilation/hw5/parser.ypp"
     {
         int num = dynamic_cast<Num*>((yyvsp[(1) - (1)]))->val;
         Type* dest = new Type(NUM, utils.intToString(num));
-        (yyval) = dest;
+        (yyval) = new Exp(dest);
     ;}
     break;
 
   case 58:
-#line 413 "parser.ypp"
+#line 424 "/Users/miki/Desktop/Compilation/hw5/parser.ypp"
     {
 	    parser.verifyByteSize((yyvsp[(1) - (2)]));
-	    (yyval) = new Type(BYTE);
+	    (yyval) = new Exp(new Type(BYTE));
 	;}
     break;
 
   case 59:
-#line 419 "parser.ypp"
+#line 430 "/Users/miki/Desktop/Compilation/hw5/parser.ypp"
     { (yyval) = wrapper.newString(dynamic_cast<Id*>((yyvsp[(1) - (1)]))->id); ;}
     break;
 
   case 60:
-#line 422 "parser.ypp"
+#line 433 "/Users/miki/Desktop/Compilation/hw5/parser.ypp"
     { (yyval) = wrapper.boolTrue(); ;}
     break;
 
   case 61:
-#line 425 "parser.ypp"
+#line 436 "/Users/miki/Desktop/Compilation/hw5/parser.ypp"
     { (yyval) = wrapper.boolFalse(); ;}
     break;
 
   case 62:
-#line 428 "parser.ypp"
+#line 439 "/Users/miki/Desktop/Compilation/hw5/parser.ypp"
     {
     	parser.verifyType((yyvsp[(2) - (2)]), BOOL);
         (yyval) = wrapper.boolNot((yyvsp[(2) - (2)]));
@@ -1986,7 +1997,7 @@ yyreduce:
     break;
 
   case 63:
-#line 434 "parser.ypp"
+#line 445 "/Users/miki/Desktop/Compilation/hw5/parser.ypp"
     {
 	    parser.verifyType((yyvsp[(1) - (4)]), BOOL);
 	    parser.verifyType((yyvsp[(4) - (4)]), BOOL);
@@ -1995,7 +2006,7 @@ yyreduce:
     break;
 
   case 64:
-#line 441 "parser.ypp"
+#line 452 "/Users/miki/Desktop/Compilation/hw5/parser.ypp"
     {
 	    parser.verifyType((yyvsp[(1) - (4)]), BOOL);
      	parser.verifyType((yyvsp[(4) - (4)]), BOOL);
@@ -2004,7 +2015,7 @@ yyreduce:
     break;
 
   case 65:
-#line 448 "parser.ypp"
+#line 459 "/Users/miki/Desktop/Compilation/hw5/parser.ypp"
     {
 	    parser.verifyTypes((yyvsp[(1) - (3)]), 3, NUM, BYTE, INT);
 	    parser.verifyTypes((yyvsp[(3) - (3)]), 3, NUM, BYTE, INT);
@@ -2013,18 +2024,18 @@ yyreduce:
     break;
 
   case 66:
-#line 455 "parser.ypp"
+#line 466 "/Users/miki/Desktop/Compilation/hw5/parser.ypp"
     { (yyval) = new Label(code_buffer->genLabel()); ;}
     break;
 
   case 67:
-#line 456 "parser.ypp"
+#line 467 "/Users/miki/Desktop/Compilation/hw5/parser.ypp"
     { (yyval) = new Num(code_buffer->emit("j ")); ;}
     break;
 
 
 /* Line 1267 of yacc.c.  */
-#line 2028 "parser.tab.cpp"
+#line 2039 "/Users/miki/Desktop/Compilation/hw5/parser.tab.cpp"
       default: break;
     }
   YY_SYMBOL_PRINT ("-> $$ =", yyr1[yyn], &yyval, &yyloc);
@@ -2238,6 +2249,6 @@ yyreturn:
 }
 
 
-#line 459 "parser.ypp"
+#line 470 "/Users/miki/Desktop/Compilation/hw5/parser.ypp"
 
 

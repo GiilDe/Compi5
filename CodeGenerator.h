@@ -34,10 +34,12 @@ private:
 
     int str_count;
 
-    void save_callee_registers(){
+    void save_callee_registers() {
+
     }
 
-    void restore_callee_registers(){
+    void restore_callee_registers() {
+
     }
 
     void procedureCalleeStart() {
@@ -48,13 +50,12 @@ private:
             string var_num_s = utils.intToString(var_num);
             buffer->emit("sub $sp, $sp, " + var_num_s);
         }
-        buffer->emit("move $fp, $sp");
     }
 
     void emitPrint() {
         buffer->emit("print:");
         buffer->emit("lw $a0, 0($sp)");
-        buffer->emit("li $v0, 1");
+        buffer->emit("li $v0, 4");
         buffer->emit("syscall");
         buffer->emit("jr $ra");
     }
@@ -62,7 +63,7 @@ private:
     void emitPrinti() {
         buffer->emit("printi:");
         buffer->emit("lw $a0, 0($sp)");
-        buffer->emit("li $v0, 4");
+        buffer->emit("li $v0, 1");
         buffer->emit("syscall");
         buffer->emit("jr $ra");
     }
@@ -70,29 +71,29 @@ private:
 public:
     explicit CodeGenerator(Parser* parser);
 
-    string getFreeRegister();
+//    string getFreeRegister();
 
     void procedureCalleeEnd() {
         restore_callee_registers();
-        buffer->emit("move $sp, $fp");
         buffer->emit("jr $ra");
-        buffer->emit("add $sp, $sp, 4");
-        buffer->emit("lw $ra, 0($sp)");
     }
 
-    void function_call(const string& id, const stack_data* argumentsData){
+    void function_call(Exp* funcExp, const stack_data* argumentsData){
         const ArgumentList* typesList = dynamic_cast<const ArgumentList*>(argumentsData);
-        const vector<Argument*>& types = typesList->params;
+        const vector<Exp*>& types = typesList->params;
         vector<string> arguments;
 
-        FOR_EACH_CONST(iter, vector<Argument*>, types) {
-            const Argument* arg = *iter;
-            pair<int, int> varData = parser->getVariable(arg->id);
+        FOR_EACH_CONST(iter, vector<Exp*>, types) {
+            const Exp* arg = *iter;
+            pair<int, int> varData = parser->getVariable(arg ? arg->id : NULL);
             if (varData.first == -1) {
-                // Not a variable, so probably an expressionw
+                // Not a variable, so probably an expression
+                // arguments.push_back(utils.intToString(offset * 4) + "($fp)");
+                arguments.push_back(arg->type->reg.name);
+            } else {
+                int offset = varData.second;
+                arguments.push_back(utils.intToString(offset * 4) + "($fp)");
             }
-            int offset = varData.second;
-            arguments.push_back(utils.intToString(offset * 4) + "($fp)");
         }
 
         // Save previous frame pointer
@@ -104,12 +105,22 @@ public:
             push(arguments[i]);
         }
 
-        // Jump to procedure
-        buffer->emit("jal " + id);
-
         int real_var_size = 4 * arguments.size();
+        string var_num_s = utils.intToString(real_var_size);
         if (real_var_size > 0) {
-            string var_num_s = utils.intToString(real_var_size);
+
+        }
+        buffer->emit("add $fp, $sp, " + var_num_s);
+        // Jump to procedure
+        buffer->emit("jal " + funcExp->id->id);
+
+        int funcReturnType = parser->getFunctionReturnType(funcExp->id);
+        if (funcReturnType != VOID) {
+            funcExp->type->reg = parser->getFreeRegister();
+            mov(funcExp->type->reg.name, "$v0");
+        }
+
+        if (real_var_size > 0) {
             buffer->emit("add $sp, $sp, " + var_num_s);
         }
 
@@ -130,25 +141,25 @@ public:
         procedureCalleeStart();
     }
 
-    void freeRegister(const string& name);
+    // void freeRegister(const string& name);
 
     bool isFromMemory(const string& name);
 
     string getRegisterIfMemory(Type* t);
 
-    Type* assignRegisterToID(stack_data* idData);
+    Exp* assignRegisterToID(stack_data* idData);
 
     CodeBuffer * buf();
 
     void printBuffer();
 
-    void lw(const string& reg /*dest*/, const string& src);
+    void lw(const Register& reg /*dest*/, const Register& src);
 
-    void sw(const string& reg, const string& dest);
+    void sw(const Register& reg, const Register& dest);
 
-    void li(const string& dest, int num);
+    void li(const Register& dest, int num);
 
-    void li(const string& dest, const string& num);
+    void li(const Register& dest, const string& num);
 
     void push(const string &src);
 
@@ -156,27 +167,31 @@ public:
 
     void mov(const string &dest, const string &src);
 
-    Type* binop(int destType, stack_data *rSrcData, stack_data *srcData, stack_data* binopData);
+    Exp* binop(int destType, stack_data *rSrcData, stack_data *srcData, stack_data* binopData);
 
-    Type* relop(stack_data* b1Data, stack_data* b2Data, stack_data* opData);
+    Exp* relop(stack_data* b1Data, stack_data* b2Data, stack_data* opData);
 
-    Type* boolTrue();
+    Exp* boolTrue();
 
-    Type* boolFalse();
+    Exp* boolFalse();
 
-    Type* boolAnd(stack_data* b1Data, stack_data* b2Data, stack_data* labelData);
+    Exp* boolAnd(stack_data* b1Data, stack_data* b2Data, stack_data* labelData);
 
-    Type* boolOr(stack_data* b1Data, stack_data* b2Data, stack_data* labelData);
+    Exp* boolOr(stack_data* b1Data, stack_data* b2Data, stack_data* labelData);
 
-    Type* boolNot(stack_data* bData);
+    Exp* boolNot(stack_data* bData);
+
+    Exp* newString(const string& val);
 
     void boolAssignment(const string& dest, Type *t);
 
     void doAssignOp(stack_data* expTypeData, stack_data* idData, int type);
 
-    Type* newString(const string& val);
-
     void doReturn(stack_data* retExp);
+
+    void doBreak();
+
+    void doContinue();
 
     void procedure();
 

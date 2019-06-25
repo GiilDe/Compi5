@@ -35,20 +35,92 @@ struct var_data {
 };
 
 struct func_data {
-    vector<Argument*> param_types;
+    vector<Exp*> param_types;
     tokens ret_type;
 
 };
 
+static const char* regNames[] = {
+        "$zero"
+        "$fp",
+        "$sp",
+        "$v0",
+        "$a0",
+        "$a3",
+        "$ra",
+};
+
+typedef enum SysReg {
+    ZERO,
+    FP,
+    SP,
+    V0,
+    A0,
+    A3,
+    RA,
+} SystemRegister;
+
+class RegisterPool {
+private:
+    list<Register> registers;
+
+public:
+    RegisterPool() {
+        Utils utils;
+        for (int i = 0; i <= 7; ++i) {
+            string num = utils.intToString(i);
+            registers.push_front(Register("$t" + num));
+            registers.push_front(Register("$s" + num));
+        }
+        registers.push_front(Register("$t8"));
+        registers.push_front(Register("$t9"));
+    }
+
+    int size() {
+        return registers.size();
+    }
+
+    Register& getFreeRegister() {
+        for (list<Register>::iterator iter = registers.begin(); iter != registers.end(); ++iter) {
+            if ((*iter).isFree()) {
+                (*iter).acquire();
+                return *iter;
+            }
+        }
+        return registers.front();
+    }
+
+    void freeRegister(const string& name) {
+        for (list<Register>::iterator iter = registers.begin(); iter != registers.end(); ++iter) {
+            if ((*iter).getName() == name) {
+                (*iter).release();
+                return;
+            }
+        }
+    }
+
+    list<Register> getUsedRegisters() {
+        list<Register> res;
+        for (list<Register>::iterator iter = registers.begin(); iter != registers.end(); ++iter) {
+            if (!(*iter).isFree()) {
+                res.push_back(*iter);
+            }
+        }
+        return res;
+    }
+};
 
 class Scope {
 
 public:
     map<string, var_data> table;
     bool isFunctionScope;
+    RegisterPool regPool;
 
     Scope(const map<string, var_data> &table, bool isFunctionScope) : table(table),
-                                                                      isFunctionScope(isFunctionScope) {}
+                                                                      isFunctionScope(isFunctionScope),
+                                                                      regPool() {}
+
 };
 
 typedef map<string, var_data> ScopeTable;
@@ -69,12 +141,12 @@ private:
 
     map<string, func_data> func_table;
 
-    bool compare_types(const vector<Argument*>& v1, const vector<Argument*>& v2) const {
+    bool compare_types(const vector<Exp*>& v1, const vector<Exp*>& v2) const {
         if(v1.size() != v2.size()){
             return false;
         }
         for (int i = 0; i < v1.size(); ++i){
-            if(!utils.isAssignable(v1[i]->type, v2[i]->type))
+            if(!utils.isAssignable(v1[i]->type->type, v2[i]->type->type))
                 return false;
         }
         return true;
@@ -104,7 +176,9 @@ public:
 
     tokens getVariableType(const stack_data* stackData) const;
 
-    void addFunction(vector<Argument*> param_types, tokens ret_type, const string& name);
+    void addFunction(vector<Exp*> param_types, tokens ret_type, const string& name);
+
+    tokens getFunctionReturnType(const string& data) const;
 
     tokens getFunctionReturnType(stack_data* stackData) const;
 
@@ -137,6 +211,12 @@ public:
     void inWhile();
 
     void outWhile();
+
+    Register getFreeRegister();
+
+    void freeRegister(const string& name);
+
+    list<Register> getUsedRegisters();
 };
 
 

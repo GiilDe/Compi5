@@ -1,0 +1,13 @@
+
+int fib(int n) {
+    if (n == 0 or n == 1) return 1;
+
+    return fib((n-1)) + (fib(n-2));
+}
+
+void main() {
+    printi(fib(4)); // Prints 3
+    print("\n");
+    printi(fib((7) - 1 / 1)); // Prints 8
+    print("\nDone");
+}

@@ -69,9 +69,9 @@ void Parser::exitLastScope() {
         func_data data = func_table[name];
         string ret_type = utils.typeToString(data.ret_type);
         vector<string> args;
-        for(vector<Argument*>::const_iterator iter = data.param_types.begin(); iter != data.param_types.end(); ++iter){
-            const Argument* arg = *iter;
-            args.push_back(utils.typeToString(arg->type));
+        for(vector<Exp*>::const_iterator iter = data.param_types.begin(); iter != data.param_types.end(); ++iter){
+            const Exp* arg = *iter;
+            args.push_back(utils.typeToString(arg->type->type));
         }
         string s = makeFunctionType(ret_type, args);
         string to_print = name + " " + s + " " + "0";
@@ -138,6 +138,9 @@ pair<int, int> Parser::getVariable(const string& name){
 }
 
 pair<int, int> Parser::getVariable(const stack_data* stackData){
+    if (!stackData) {
+        return make_pair(-1, -1);
+    }
     const Id* varId = dynamic_cast<const Id*>(stackData);
     return getVariable(varId->id);
 }
@@ -157,10 +160,14 @@ tokens Parser::getVariableType(const stack_data* stackData) const {
     WRAP_ERROR(errorUndef(yylineno, varId->id));
 }
 
+tokens Parser::getFunctionReturnType(const string& id) const {
+    const func_data& funcData = func_table.at(id);
+    return funcData.ret_type;
+}
+
 tokens Parser::getFunctionReturnType(stack_data* stackData) const {
     Id* funId = dynamic_cast<Id*>(stackData);
-    const func_data& funcData = func_table.at(funId->id);
-    return funcData.ret_type;
+    return getFunctionReturnType(funId->id);
 }
 
 void Parser::setCurrentReturnType(stack_data* stackData) {
@@ -176,13 +183,13 @@ void Parser::verifyFunctionDefined(stack_data* stackData) const {
 
 void Parser::verifyRightParams(stack_data* func_name, stack_data* param_list) const {
     string functionId = dynamic_cast<Id*>(func_name)->id;
-    const vector<Argument*>& params = dynamic_cast<ArgumentList*>(param_list)->params;
-    const vector<Argument*>& real_params = func_table.at(functionId).param_types;
+    const vector<Exp*>& params = dynamic_cast<ArgumentList*>(param_list)->params;
+    const vector<Exp*>& real_params = func_table.at(functionId).param_types;
     vector<string> params_string;
 
-    FOR_EACH_CONST(iter, vector<Argument*>, real_params) {
-        Argument* id = *iter;
-        string s = utils.typeToString(id->type);
+    FOR_EACH_CONST(iter, vector<Exp*>, real_params) {
+        Exp* id = *iter;
+        string s = utils.typeToString(id->type->type);
         params_string.push_back(s);
     }
 
@@ -199,7 +206,7 @@ void Parser::verifyVariableDefined(stack_data * stackData) const {
 }
 
 void Parser::verifyType(stack_data *stackData, int t) const {
-    Type* type = dynamic_cast<Type*>(stackData);
+    Type* type = dynamic_cast<Exp*>(stackData)->type;
     if (type == NULL || !utils.isAssignable(type->type, t)) {
         WRAP_ERROR(errorMismatch(yylineno));
     }
@@ -216,14 +223,14 @@ void Parser::verifyByteSize(stack_data* stackData) const {
 
 void Parser::verifyIdType(stack_data* idStackData, stack_data* expStackData) const {
     Id* id = dynamic_cast<Id*>(idStackData);
-    Type* type = dynamic_cast<Type*>(expStackData);
+    Exp* exp = dynamic_cast<Exp*>(expStackData);
 
     FOR_EACH_CONST(iter, vector<Scope>, scopes_tables) {
         const Scope &scope = *iter;
         const ScopeTable& t = scope.table;
         if (t.find(id->id) != t.end()) {
             const var_data& varData = t.at(id->id);
-            if (!utils.isAssignable(varData.type, type->type)) {
+            if (!utils.isAssignable(varData.type, exp->type->type)) {
                 WRAP_ERROR(errorMismatch(yylineno));
             }
         }
@@ -237,14 +244,14 @@ void Parser::verifyReturn(int type) const {
 }
 
 int Parser::verifyTypes(stack_data *stackData, int num, ...) const {
-    Type* type = dynamic_cast<Type*>(stackData);
+    Exp* exp = dynamic_cast<Exp*>(stackData);
 
     va_list arguments;
 
     va_start(arguments, num);           // Initializing arguments to store all values after num
     for ( int x = 0; x < num; x++) {
         int t = va_arg(arguments, int);
-        if (type != NULL && utils.isAssignable(type->type,t) ) {
+        if (exp->type != NULL && utils.isAssignable(exp->type->type,t) ) {
             return t;
         }
     }
@@ -285,7 +292,7 @@ void Parser::addFunctionDeclaration(stack_data* retType, stack_data *idVarData, 
     addFunction(func_params->params, ret_type, id);
 }
 
-void Parser::addFunction(vector<Argument*> param_types, tokens ret_type, const string& name) {
+void Parser::addFunction(vector<Exp*> param_types, tokens ret_type, const string& name) {
     func_data fd = {param_types, ret_type};
     if (func_table.find(name) != func_table.end()) {
         WRAP_ERROR(errorDef(yylineno, name));
@@ -302,6 +309,21 @@ void Parser::outWhile() {
     in_while--;
 }
 
+Register Parser::getFreeRegister() {
+    Scope& topScope = scopes_tables.back();
+    return topScope.regPool.getFreeRegister();
+}
+
+void Parser::freeRegister(const string& name) {
+    Scope& topScope = scopes_tables.back();
+    return topScope.regPool.freeRegister(name);
+}
+
+list<Register> Parser::getUsedRegisters() {
+    Scope& topScope = scopes_tables.back();
+    return topScope.regPool.getUsedRegisters();
+}
+
 Parser::Parser(Utils& utils) :
         utils(utils),
         scopes_tables(),
@@ -316,10 +338,10 @@ Parser::Parser(Utils& utils) :
     offsets_stack.push(0);
 
     // Add library functions
-    vector<Argument*> v1;
-    v1.push_back(new Argument("s", STRING));
+    vector<Exp*> v1;
+    v1.push_back(new Exp(new Id("s"), new Type(STRING)));
     addFunction(v1, static_cast<tokens>(VOID), "print");
-    vector<Argument*> v2;
-    v2.push_back(new Argument("n", INT));
+    vector<Exp*> v2;
+    v2.push_back(new Exp(new Id("n"), new Type(INT)));
     addFunction(v2, static_cast<tokens>(VOID), "printi");
 }

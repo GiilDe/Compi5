@@ -132,8 +132,8 @@ Formals	:	/*epsilon*/
 		|	FormalsList
 		{
             ArgumentList *tl = new ArgumentList();
-            vector<Argument*>& params = tl->params;
-            vector<Argument*>& params_other = dynamic_cast<ArgumentList*>($1)->params;
+            vector<Exp*>& params = tl->params;
+            vector<Exp*>& params_other = dynamic_cast<ArgumentList*>($1)->params;
             params = params_other;
 
             $$ = tl;
@@ -142,7 +142,7 @@ Formals	:	/*epsilon*/
 
 FormalsList	:	FormalDecl
             {
-                Argument* arg = static_cast<Argument*>($1);
+                Exp* arg = dynamic_cast<Exp*>($1);
                 ArgumentList* tl = new ArgumentList();
                 tl->params.push_back(arg);
 
@@ -151,9 +151,9 @@ FormalsList	:	FormalDecl
 			|	FormalDecl COMMA FormalsList
 			{
                 ArgumentList *tl = new ArgumentList();
-                vector<Argument*>& params = tl->params;
-                vector<Argument*>& params_other = dynamic_cast<ArgumentList*>($3)->params;
-                params.push_back(dynamic_cast<Argument*>($1));
+                vector<Exp*>& params = tl->params;
+                vector<Exp*>& params_other = dynamic_cast<ArgumentList*>($3)->params;
+                params.push_back(dynamic_cast<Exp*>($1));
                 params.insert(params.end(), params_other.begin(), params_other.end());
 
                 $$ = tl;
@@ -165,7 +165,7 @@ FormalDecl	:	Type ID
                 parser.tryAddVariable($1, $2, true);
                 Id* id = dynamic_cast<Id*>($2);
                 Type* t = dynamic_cast<Type*>($1);
-                Argument* arg = new Argument(id->id, t->type);
+                Exp* arg = new Exp(id, t);
                 $$ = arg;
 	        }
             ;
@@ -195,7 +195,7 @@ Open_statement: If_Start M Simple_statement
                 {
                     string after_if_label = code_buffer->genLabel();
                     string label_true = dynamic_cast<Label*>($2)->label;
-                    Type* t = dynamic_cast<Type*>($1);
+                    Type* t = dynamic_cast<Exp*>($1)->type;
                     code_buffer->bpatch(t->true_list, label_true);
                     code_buffer->bpatch(t->false_list, after_if_label);
                     parser.exitScope(false, NULL, NULL);
@@ -205,7 +205,7 @@ Open_statement: If_Start M Simple_statement
                 {
                     string after_if_label = code_buffer->genLabel();
                     string label_true = dynamic_cast<Label*>($2)->label;
-                    Type* t = dynamic_cast<Type*>($1);
+                    Type* t = dynamic_cast<Exp*>($1)->type;
                     code_buffer->bpatch(t->true_list, label_true);
                     code_buffer->bpatch(t->false_list, after_if_label);
                     parser.exitScope(false, NULL, NULL);
@@ -213,7 +213,7 @@ Open_statement: If_Start M Simple_statement
 
               | If_Else Open_statement
                 {
-                    Type *t = dynamic_cast<Type*>($1);
+                    Type *t = dynamic_cast<Exp*>($1)->type;
                     string exit_label = code_buffer->genLabel();
                     code_buffer->bpatch(t->exit_list, exit_label);
                     parser.exitScope(false, NULL, NULL);
@@ -237,7 +237,7 @@ Open_statement: If_Start M Simple_statement
 Closed_statement: Simple_statement
                 | If_Else Closed_statement
                 {
-                    Type *t = dynamic_cast<Type*>($1);
+                    Type *t = dynamic_cast<Exp*>($1)->type;
                     string exit_label = code_buffer->genLabel();
                     code_buffer->bpatch(t->exit_list, exit_label);
                     parser.exitScope(false, NULL, NULL);
@@ -279,14 +279,14 @@ If_Else: If_Start M Closed_statement N {parser.exitScope(false, NULL, NULL);} EL
 {
     string label_true = dynamic_cast<Label*>($2)->label;
     string label_false = dynamic_cast<Label*>($8)->label;
-    Type* if_exp = dynamic_cast<Type*>($1);
+    Type* if_exp = dynamic_cast<Exp*>($1)->type;
     code_buffer->bpatch(if_exp->true_list, label_true);
     code_buffer->bpatch(if_exp->false_list, label_false);
 
     int exit_address = dynamic_cast<Num*>($4)->val;
-    $$ = new Type();
-    Type* t = dynamic_cast<Type*>($$);
+    Type* t = new Type();
     t->exit_list.push_back(exit_address);
+    $$ = new Exp(t);
 }
 
 Simple_statement:  LBRACE { parser.newScope(false); } Statements RBRACE
@@ -295,13 +295,14 @@ Simple_statement:  LBRACE { parser.newScope(false); } Statements RBRACE
                 | Type ID SC
                 {
                     parser.tryAddVariable($1, $2, false);
+                    wrapper.doAssignOp(NULL, $2, parser.getVariableType($2));
                 }
 
                 | Type ID ASSIGN Exp SC
                 {
-                    Type* expType = dynamic_cast<Type*>($4);
+                    Exp* expType = dynamic_cast<Exp*>($4);
                     Type *t1 = dynamic_cast<Type*>($1);
-                    parser.verifyType($1, expType->type);
+                    parser.verifyType($1, expType->type->type);
                     parser.tryAddVariable($1, $2, false);
                     wrapper.doAssignOp($4, $2, t1->type);
                 }
@@ -324,6 +325,7 @@ Simple_statement:  LBRACE { parser.newScope(false); } Statements RBRACE
                 {
                     parser.verifyBreak();
                     $$ = new Type(static_cast<int>(VOID));
+
                 }
 
                 | CONTINUE SC
@@ -333,38 +335,47 @@ Simple_statement:  LBRACE { parser.newScope(false); } Statements RBRACE
 Call	:	ID LPAREN ExpList RPAREN
             {
                 parser.verifyFunctionDefined($1);
-                $$ = new Type(parser.getFunctionReturnType($1));
+                Type *funcType = new Type(parser.getFunctionReturnType($1));
+                Id *funcId = dynamic_cast<Id*>($1);
                 parser.verifyRightParams($1, $3);
-                string id = dynamic_cast<Id*>($1)->id;
-                wrapper.function_call(id, $3)
+                Exp* funcExp = new Exp(funcId, funcType);
+                wrapper.function_call(funcExp, $3);
+
+                $$ = funcExp;
             }
 
 		|	ID LPAREN RPAREN
 		    {
 		        parser.verifyFunctionDefined($1);
-		        $$ = new Type(parser.getFunctionReturnType($1));
-                parser.verifyRightParams($1, new ArgumentList());
+		        Type *funcType = new Type(parser.getFunctionReturnType($1));
+                Id *funcId = dynamic_cast<Id*>($1);
+                ArgumentList * l = new ArgumentList();
+                parser.verifyRightParams($1, l);
+                Exp* funcExp = new Exp(funcId, funcType);
+                wrapper.function_call(funcExp, l);
+
+                $$ = funcExp;
 		    }
 	    ;
 
 ExpList	:	Exp
         {
-            int type = static_cast<Type*>($1)->type;
-            vector<Argument*> v;
-            v.push_back(new Argument("", type));
+            Exp* exp = dynamic_cast<Exp*>($1);
+            vector<Exp*> v;
+            v.push_back(exp);
             $$ = new ArgumentList(v);
         }
 		|	Exp COMMA ExpList
 		{
-            vector<Argument*> v1;
-            int type = static_cast<Type*>($1)->type;
-            v1.push_back(new Argument(NULL, type));
+            vector<Exp*> v1;
+            Exp* expData = dynamic_cast<Exp*>($1);
+            v1.push_back(expData);
             ArgumentList *tl = new ArgumentList(v1);
-            vector<Argument*>& v = tl->params;
-            vector<Argument*>& exp = dynamic_cast<ArgumentList*>($3)->params;
+            vector<Exp*>& v = tl->params;
+            vector<Exp*>& exp = dynamic_cast<ArgumentList*>($3)->params;
             v.insert(v.end(), exp.begin(), exp.end());
 
-            $$ = tl
+            $$ = tl;
 		}
 	    ;
 
@@ -379,7 +390,7 @@ Type	:	INT
 	    ;
 
 Exp	:	LPAREN Exp RPAREN
-    { $$ = $2 }
+    { $$ = $2; }
 
 	|	Exp BINOP Exp
 	{
@@ -406,13 +417,13 @@ Exp	:	LPAREN Exp RPAREN
 	{
         int num = dynamic_cast<Num*>($1)->val;
         Type* dest = new Type(NUM, utils.intToString(num));
-        $$ = dest;
+        $$ = new Exp(dest);
     }
 
 	|	NUM B
 	{
 	    parser.verifyByteSize($1);
-	    $$ = new Type(BYTE);
+	    $$ = new Exp(new Type(BYTE));
 	}
 
 	|	STRING
