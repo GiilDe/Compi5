@@ -28,7 +28,7 @@ CodeGenerator::CodeGenerator(Parser* parser) :
     relop_map["=="] = "beq";
     relop_map["!="] = "bne";
 
-    binop_map["+"] = "add";
+    binop_map["+"] = "addu";
     binop_map["-"] = "sub";
     binop_map["*"] = "mul";
     binop_map["/"] = "div";
@@ -129,6 +129,11 @@ Exp* CodeGenerator::binop(int destType, stack_data *rSrcData, stack_data *srcDat
     }
     buffer->emit(binop_map.at(binop->op) + " " + sdest + ", " + sRsrc + ", " + ssrc);
 
+    if (destType == BYTE) {
+        // Truncate
+        buffer->emit("and " + sdest + " " + sdest + " 0xff");
+    }
+
     //cout << s << endl;
 
     if (sdest != dest->reg.name) {
@@ -185,7 +190,7 @@ Exp* CodeGenerator::boolTrue() {
 Exp* CodeGenerator::boolFalse() {
     Type* b = new Type(BOOL);
     b->bool_exp = true;
-    b->true_list.push_back(buffer->emit("j "));
+    b->false_list.push_back(buffer->emit("j "));
     return new Exp(b);
 }
 
@@ -253,9 +258,15 @@ bool CodeGenerator::isFromMemory(const string &name) {
 }
 
 string CodeGenerator::getRegisterIfMemory(Type *t) {
-    if (isFromMemory(t->reg.name)) {
+    string name = t->reg.name;
+    if (isFromMemory(name)) {
         Register reg = parser->getFreeRegister();
         lw(reg, t->reg);
+        return reg.name;
+    }
+    if (utils.isNumber(name)) {
+        Register reg = parser->getFreeRegister();
+        li(reg, name);
         return reg.name;
     }
     return t->reg.name;
@@ -324,10 +335,39 @@ Exp* CodeGenerator::newString(const string &val) {
 }
 
 void CodeGenerator::doReturn(stack_data *retExpData) {
-    Exp * retExp = dynamic_cast<Exp*>(retExpData);
-    parser->verifyReturn(retExp->type->type);
-    mov("$v0", retExp->type->reg.name);
+    int type;
+    if (retExpData == NULL) {
+        type = VOID;
+    } else {
+        Exp * retExp = dynamic_cast<Exp*>(retExpData);
+        type = retExp->type->type;
+
+        if (type == BOOL) {
+            boolAssignment("$v0", retExp->type);
+        } else {
+            mov("$v0", retExp->type->reg.name);
+        }
+    }
+    parser->verifyReturn(type);
     procedureCalleeEnd();
+}
+
+Type* CodeGenerator::doBreak() {
+    parser->verifyBreak();
+
+    Type * t = new Type(VOID);
+    t->exit_list.push_back(buffer->emit("j "));
+
+    return t;
+}
+
+void CodeGenerator::doContinue() {
+    parser->verifyContinue();
+
+    Scope& scope = parser->currentScope();
+    if (scope.scopeLabel != "") {
+        buffer->emit("j " + scope.scopeLabel);
+    }
 }
 
 void CodeGenerator::emitZeroDivisionCheck(const string& src) {

@@ -61,10 +61,12 @@ continue                        return CONTINUE;
                                     yylval = new Binop(yytext);
                                     return RELOP;
                                 }
-\+|\-|\*|\/                     {
-                                    yylval = new Binop(yytext);
-                                    return BINOP;
-                                }
+
+\+                              { yylval = new Binop(yytext); return ADD; }
+\-                              { yylval = new Binop(yytext); return SUB; }
+\*                              { yylval = new Binop(yytext); return MUL; }
+\/                              { yylval = new Binop(yytext); return DIV; }
+
 [a-zA-Z][a-zA-Z0-9]*            {
                                     yylval = new Id(yytext);
                                     return ID;

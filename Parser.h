@@ -116,10 +116,12 @@ public:
     map<string, var_data> table;
     bool isFunctionScope;
     RegisterPool regPool;
+    string scopeLabel;
 
     Scope(const map<string, var_data> &table, bool isFunctionScope) : table(table),
                                                                       isFunctionScope(isFunctionScope),
-                                                                      regPool() {}
+                                                                      regPool(),
+                                                                      scopeLabel("") {}
 
 };
 
@@ -160,7 +162,11 @@ public:
 
     void newScope(bool isFuncScope);
 
+    void newScope(bool isFuncScope, string label);
+
     void exitScope(bool isFuncScope, stack_data* name, stack_data* precondNum);
+
+    Scope& currentScope();
 
     void exitLastScope();
 

@@ -34,18 +34,24 @@ private:
 
     int str_count;
 
-    void save_callee_registers() {
-
+    void save_caller_registers() {
+        list<Register> used = parser->getUsedRegisters();
+        for (list<Register>::iterator iter = used.begin(); iter != used.end(); ++iter) {
+            push((*iter).name);
+        }
     }
 
-    void restore_callee_registers() {
-
+    void restore_caller_registers() {
+        list<Register> used = parser->getUsedRegisters();
+        // Restore in reverse order
+        for (list<Register>::reverse_iterator iter = used.rbegin(); iter != used.rend(); ++iter) {
+            pop((*iter).name);
+        }
     }
 
     void procedureCalleeStart() {
         // Backup
         int var_num = parser->scope_var_num * 4;
-        save_callee_registers();
         if (var_num > 0) {
             string var_num_s = utils.intToString(var_num);
             buffer->emit("sub $sp, $sp, " + var_num_s);
@@ -71,10 +77,7 @@ private:
 public:
     explicit CodeGenerator(Parser* parser);
 
-//    string getFreeRegister();
-
     void procedureCalleeEnd() {
-        restore_callee_registers();
         buffer->emit("jr $ra");
     }
 
@@ -89,12 +92,22 @@ public:
             if (varData.first == -1) {
                 // Not a variable, so probably an expression
                 // arguments.push_back(utils.intToString(offset * 4) + "($fp)");
-                arguments.push_back(arg->type->reg.name);
+                Type* type = arg->type;
+                if (type->type == BOOL) {
+                    Register reg = parser->getFreeRegister();
+                    boolAssignment(reg.name, type);
+                    arguments.push_back(reg.name);
+                    parser->freeRegister(reg.name);
+                } else {
+                    arguments.push_back(arg->type->reg.name);
+                }
             } else {
                 int offset = varData.second;
                 arguments.push_back(utils.intToString(offset * 4) + "($fp)");
             }
         }
+
+        // save_caller_registers();
 
         // Save previous frame pointer
         push("$fp");
@@ -108,9 +121,9 @@ public:
         int real_var_size = 4 * arguments.size();
         string var_num_s = utils.intToString(real_var_size);
         if (real_var_size > 0) {
-
+            buffer->emit("add $fp, $sp, " + var_num_s);
         }
-        buffer->emit("add $fp, $sp, " + var_num_s);
+
         // Jump to procedure
         buffer->emit("jal " + funcExp->id->id);
 
@@ -118,6 +131,7 @@ public:
         if (funcReturnType != VOID) {
             funcExp->type->reg = parser->getFreeRegister();
             mov(funcExp->type->reg.name, "$v0");
+            parser->freeRegister(funcExp->type->reg.name);
         }
 
         if (real_var_size > 0) {
@@ -128,6 +142,8 @@ public:
         pop("$ra");
         // Restore frame pointer
         pop("$fp");
+
+        // restore_caller_registers();
     }
 
     void newFunction(stack_data* funcIdData) {
@@ -136,6 +152,7 @@ public:
 
         if (id == "main") {
             id = START_FUN; // Wrap main function
+
         }
         buffer->emit(id + ":");
         procedureCalleeStart();
@@ -189,7 +206,7 @@ public:
 
     void doReturn(stack_data* retExp);
 
-    void doBreak();
+    Type* doBreak();
 
     void doContinue();
 

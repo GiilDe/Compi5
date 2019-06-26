@@ -23,6 +23,15 @@ void Parser::newScope(bool isFuncScope) {
     scopes_tables.push_back(Scope(ScopeTable(), isFuncScope));
 }
 
+void Parser::newScope(bool isFuncScope, string label) {
+    scope_var_num = 0;
+    func_param_offset = -1;
+    offsets_stack.push(offsets_stack.top());
+    Scope s = Scope(ScopeTable(), isFuncScope);
+    s.scopeLabel = label;
+    scopes_tables.push_back(s);
+}
+
 void Parser::exitScope(bool isFuncScope, stack_data *name, stack_data *precondNum) {
     endScope();
     if (isFuncScope) {
@@ -60,6 +69,10 @@ void Parser::exitScope(bool isFuncScope, stack_data *name, stack_data *precondNu
     }
 
     scopes_tables.pop_back();
+}
+
+Scope& Parser::currentScope() {
+    return scopes_tables.back();
 }
 
 void Parser::exitLastScope() {

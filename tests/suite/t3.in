@@ -1,9 +1,13 @@
+byte getByte() {
+    return 2b;
+}
+
 void main(){
     int x = ((2));
     int z = 5;
     int y = 2*z/x;
 
     printi(z);
-    z = (5)/(x-2);
-    print("Im mean!");
+    z = (5)/(x-getByte());
+    print("\nIm mean!");
 }
