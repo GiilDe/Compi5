@@ -403,18 +403,18 @@ ExpList	:	Exp
             v.push_back(exp);
             $$ = wrapper.push_argument($1, new ArgumentList(v));
         }
-		|	Exp COMMA ExpList
+		|	 ExpList COMMA Exp
 		{
             // vector<Exp*> v1;
-            Exp* expData = dynamic_cast<Exp*>($1);
+            Exp* expData = dynamic_cast<Exp*>($3);
             // v1.push_back(expData);
             // ArgumentList *tl = new ArgumentList(v1);
             // vector<Exp*>& v = tl->params;
-            vector<Exp*>& exp = dynamic_cast<ArgumentList*>($3)->params;
+            vector<Exp*>& exp = dynamic_cast<ArgumentList*>($1)->params;
             exp.push_back(expData);
             // v.insert(v.end(), exp.begin(), exp.end());
 
-            $$ = wrapper.push_argument($1, $3);
+            $$ = wrapper.push_argument($3, $1);
 		}
 	    ;
 

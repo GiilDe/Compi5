@@ -1,8 +1,8 @@
- bool moo() {
- 	return true;
- }
+void Func(bool s, bool t) {
+    bool g = s;
+}
 
- void main() {
-    int x = 3;
- 	bool y =
- }
+
+void main() {
+     Func(true, false);
+}
