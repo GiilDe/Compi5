@@ -380,7 +380,11 @@ Call	:	ID LPAREN ExpList RPAREN
                 Exp* funcExp = new Exp(funcId, funcType);
                 wrapper.function_call(funcExp, $3);
 
-                $$ = funcExp;
+                if (parser.getFunctionReturnType(funcId) == BOOL) {
+                    $$ = wrapper.boolFunc(funcId);
+                } else {
+                    $$ = funcExp;
+                }
             }
 
 		|	ID LPAREN RPAREN
@@ -487,12 +491,7 @@ Exp	:	LPAREN Exp RPAREN
 
 	|	Call
 	{
-	    Exp *exp = dynamic_cast<Exp*>($1);
-	    if (parser.getFunctionReturnType(exp->id) == BOOL) {
-	        $$ = wrapper.boolFunc($1);
-	    } else {
-            $$ = $1;
-	    }
+	    $$ = $1;
 	}
 
 	|	NUM
