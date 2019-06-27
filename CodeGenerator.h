@@ -29,6 +29,8 @@ private:
     map<string, string> relop_map;
     map<string, string> binop_map;
 
+    int stack_size;
+
     /**
      * Label counter for zero-division checks
      */
@@ -123,12 +125,9 @@ public:
     }
 
     void save_caller_registers() {
-        if (registers.size() > 0) {
-            RegisterPool& pool = registers.back();
-            list<Register> used = pool.getUsedRegisters();
-            for (list<Register>::iterator iter = used.begin(); iter != used.end(); ++iter) {
-                push((*iter).name);
-            }
+        list<Register> used = getUsedRegisters();
+        for (list<Register>::iterator iter = used.begin(); iter != used.end(); ++iter) {
+            push((*iter).name);
         }
         // Save previous frame pointer
         push("$fp");
@@ -214,11 +213,10 @@ public:
 //            buffer->emit("sub $fp, $sp, " + utils.intToString(4 * arguments.size()));
 
 //        buffer->emit("sub $sp, $sp, 4");
-//        if (arguments.size() > 0 )
-//            buffer->emit("sub $fp, $sp, 4");
+        if (arguments.size() > 0 )
+            buffer->emit("sub $fp, $sp, 4");
 
         registers.push_back(RegisterPool());
-
 
 //        if (real_var_size > 0) {
 //            buffer->emit("add $fp, $sp, " + var_num_s);
