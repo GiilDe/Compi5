@@ -129,6 +129,11 @@ Exp* CodeGenerator::binop(int destType, stack_data *rSrcData, stack_data *srcDat
         buffer->emit("li " + newRsrc + ", " + sRsrc);
         sRsrc = newRsrc;
     }
+    if (utils.isNumber(ssrc)) {
+        string newSsrc = getFreeRegister().name;
+        buffer->emit("li " + newSsrc + ", " + ssrc);
+        ssrc = newSsrc;
+    }
     buffer->emit(binop_map.at(binop->op) + " " + sdest + ", " + sRsrc + ", " + ssrc);
 
     if (destType == BYTE) {
