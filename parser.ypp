@@ -487,7 +487,10 @@ Exp	:	LPAREN Exp RPAREN
 
 	|	Call
 	{
-	    $$ = wrapper.boolFunc($1);
+	    $$ = $1
+	    //if function is of type BOOL{
+	        //$$ = wrapper.boolFunc($1);
+	    //}
 	}
 
 	|	NUM
