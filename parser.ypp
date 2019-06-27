@@ -400,8 +400,9 @@ ExpList	:	Exp
         {
             Exp* exp = dynamic_cast<Exp*>($1);
             vector<Exp*> v;
-            v.push_back(exp);
+            v.push_back(exp, );
             $$ = new ArgumentList(v);
+            wrapper.push_argument($1);
         }
 		|	Exp COMMA ExpList
 		{

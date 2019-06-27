@@ -149,6 +149,20 @@ public:
         return pool.getUsedRegisters();
     }
 
+    void push_argument(stack_data* arg){
+        Exp* argument = dynamic_cast<Exp*>(arg);
+        Type* type = armu->type;
+        if (type->type == BOOL) {
+            Register reg = getFreeRegister();
+            boolAssignment(reg.name, type);
+            arguments.push_back(reg.name);
+            type->reg = reg;
+            // freeRegister(reg.name);
+        } else {
+            arguments.push_back(arg->type->reg.name);
+        }
+    }
+
     void function_call(Exp* funcExp, const stack_data* argumentsData){
         const ArgumentList* typesList = dynamic_cast<const ArgumentList*>(argumentsData);
         const vector<Exp*>& types = typesList->params;
