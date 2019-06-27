@@ -108,8 +108,9 @@ public:
 
 class Preconditions : public stack_data{
 public:
+    vector<Exp*> preconditionExps;
     int preconditions_num;
-    explicit Preconditions(int num) : preconditions_num(num){}
+    Preconditions(vector<Exp*> exps) : preconditionExps(exps), preconditions_num(exps.size()) {}
 };
 
 #define YYSTYPE stack_data*

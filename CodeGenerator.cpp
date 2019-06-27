@@ -11,7 +11,8 @@ CodeGenerator::CodeGenerator(Parser* parser) :
         relop_map(),
         binop_map(),
         zdiv_check_counter(0),
-        str_count(0) {
+        str_count(0),
+        registers() {
 
     for (int i = 0; i <= 7; ++i) {
         string num = utils.intToString(i);
@@ -38,6 +39,7 @@ CodeGenerator::CodeGenerator(Parser* parser) :
 
     emitPrint();
     emitPrinti();
+    registers.push_back(RegisterPool());
 }
 
 
@@ -75,10 +77,10 @@ void CodeGenerator::mov(const string &dest, const string &src) {
     string real_src = src;
     // dest is in memory, check source
     if (isFromMemory(src)) {
-        real_src = parser->getFreeRegister().name;
+        real_src = getFreeRegister().name;
         lw(real_src, src);
     } else if (utils.isNumber(src)) {
-        real_src = parser->getFreeRegister().name;
+        real_src = getFreeRegister().name;
         li(real_src, src);
     }
     if (isFromMemory(dest)) {
@@ -87,13 +89,13 @@ void CodeGenerator::mov(const string &dest, const string &src) {
         buffer->emit("add " + dest + ", $zero, " + real_src);
     }
     if (real_src != src) {
-        parser->freeRegister(real_src);
+        freeRegister(real_src);
     }
 }
 
 Exp* CodeGenerator::binop(int destType, stack_data *rSrcData, stack_data *srcData, stack_data* binopData) {
     Type* dest = new Type(destType);
-    dest->reg = parser->getFreeRegister();
+    dest->reg = getFreeRegister();
 
     Exp* Rexp = dynamic_cast<Exp*>(rSrcData);
     Exp* exp = dynamic_cast<Exp*>(srcData);
@@ -107,14 +109,14 @@ Exp* CodeGenerator::binop(int destType, stack_data *rSrcData, stack_data *srcDat
     string ssrc = src->reg.name;
 
     if (isFromMemory(sdest)) {
-        sdest = parser->getFreeRegister().name;
+        sdest = getFreeRegister().name;
     }
     if (isFromMemory(sRsrc)) {
-        sRsrc = parser->getFreeRegister().name;
+        sRsrc = getFreeRegister().name;
         lw(sRsrc, Rsrc->reg.name);
     }
     if (isFromMemory(ssrc)) {
-        ssrc = parser->getFreeRegister().name;
+        ssrc = getFreeRegister().name;
         lw(ssrc, src->reg.name);
     }
 
@@ -123,7 +125,7 @@ Exp* CodeGenerator::binop(int destType, stack_data *rSrcData, stack_data *srcDat
     }
 
     if (utils.isNumber(sRsrc)) {
-        string newRsrc = parser->getFreeRegister().name;
+        string newRsrc = getFreeRegister().name;
         buffer->emit("li " + newRsrc + ", " + sRsrc);
         sRsrc = newRsrc;
     }
@@ -139,12 +141,8 @@ Exp* CodeGenerator::binop(int destType, stack_data *rSrcData, stack_data *srcDat
     if (sdest != dest->reg.name) {
         sw(sdest, dest->reg);
     }
-    if (sRsrc != Rsrc->reg.name) {
-        parser->freeRegister(sRsrc);
-    }
-    if (ssrc != src->reg.name) {
-        parser->freeRegister(ssrc);
-    }
+    freeRegister(sRsrc);
+    freeRegister(ssrc);
 
     return new Exp(dest);
 }
@@ -167,11 +165,11 @@ Exp* CodeGenerator::relop(stack_data* b1Data, stack_data* b2Data, stack_data* op
     false_list.push_back(buffer->emit("j "));
 
     if (reg1 != b1->type->reg.name) {
-        parser->freeRegister(reg1);
+        freeRegister(reg1);
     }
 
     if (reg2 != b2->type->reg.name) {
-        parser->freeRegister(reg2);
+        freeRegister(reg2);
     }
 
     b->true_list = true_list;
@@ -260,12 +258,12 @@ bool CodeGenerator::isFromMemory(const string &name) {
 string CodeGenerator::getRegisterIfMemory(Type *t) {
     string name = t->reg.name;
     if (isFromMemory(name)) {
-        Register reg = parser->getFreeRegister();
+        Register reg = getFreeRegister();
         lw(reg, t->reg);
         return reg.name;
     }
     if (utils.isNumber(name)) {
-        Register reg = parser->getFreeRegister();
+        Register reg = getFreeRegister();
         li(reg, name);
         return reg.name;
     }
@@ -327,7 +325,7 @@ Exp* CodeGenerator::newString(const string &val) {
     string label = "str" + utils.intToString(str_count);
     buffer->emitData(label + ": .asciiz " + val);
 
-    string reg = parser->getFreeRegister().name;
+    string reg = getFreeRegister().name;
     buffer->emit("la " + reg + ", " + label);
 
     str_count++;
@@ -363,11 +361,7 @@ Type* CodeGenerator::doBreak() {
 
 void CodeGenerator::doContinue() {
     parser->verifyContinue();
-
-    Scope& scope = parser->currentScope();
-    if (scope.scopeLabel != "") {
-        buffer->emit("j " + scope.scopeLabel);
-    }
+    buffer->emit("j " + current_while_label);
 }
 
 void CodeGenerator::emitZeroDivisionCheck(const string& src) {
@@ -377,11 +371,11 @@ void CodeGenerator::emitZeroDivisionCheck(const string& src) {
 
     string real_src = src;
     if (utils.isNumber(src)) {
-        real_src = parser->getFreeRegister().name;
+        real_src = getFreeRegister().name;
         mov(real_src, src);
     }
     buffer->emit("beq " + real_src + ", $zero, " + dbzLabel);
-    parser->freeRegister(real_src);
+    // freeRegister(real_src);
     buffer->emit("j " + ndbzLabel);
 
     buffer->emit(dbzLabel + ":");
@@ -395,14 +389,14 @@ void CodeGenerator::emitZeroDivisionCheck(const string& src) {
 }
 
 void CodeGenerator::emitMain() {
-    buffer->emit("main:");
-    buffer->emit("move $fp, $sp");
-
-    buffer->emit("jal " + string(START_FUN));
-
-    buffer->emit("halt:");
-    buffer->emit("li $v0, 10");
-    buffer->emit("syscall");
-    buffer->emit(".end main");
-    buffer->emitData("msg: .asciiz  \"Error division by zero\\n\"");
+//    buffer->emit("main:");
+//    buffer->emit("move $fp, $sp");
+//
+//    buffer->emit("jal " + string(START_FUN));
+//
+//    buffer->emit("halt:");
+//    buffer->emit("li $v0, 10");
+//    buffer->emit("syscall");
+//    buffer->emit(".end main");
+//    buffer->emitData("msg: .asciiz  \"Error division by zero\\n\"");
 }

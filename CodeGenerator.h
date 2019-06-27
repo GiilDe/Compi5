@@ -24,6 +24,8 @@ private:
 
     list<string> free_registers;
 
+    vector<RegisterPool> registers;
+
     map<string, string> relop_map;
     map<string, string> binop_map;
 
@@ -35,26 +37,42 @@ private:
     int str_count;
 
     void save_caller_registers() {
-        list<Register> used = parser->getUsedRegisters();
-        for (list<Register>::iterator iter = used.begin(); iter != used.end(); ++iter) {
-            push((*iter).name);
+        if (registers.size() > 0) {
+            RegisterPool& pool = registers.back();
+            list<Register> used = pool.getUsedRegisters();
+            for (list<Register>::iterator iter = used.begin(); iter != used.end(); ++iter) {
+                push((*iter).name);
+            }
         }
     }
 
     void restore_caller_registers() {
-        list<Register> used = parser->getUsedRegisters();
+        list<Register> used = getUsedRegisters();
         // Restore in reverse order
         for (list<Register>::reverse_iterator iter = used.rbegin(); iter != used.rend(); ++iter) {
             pop((*iter).name);
         }
     }
 
-    void procedureCalleeStart() {
+    void procedureCalleeStart(string name, stack_data* preconds) {
         // Backup
-        int var_num = parser->scope_var_num * 4;
-        if (var_num > 0) {
-            string var_num_s = utils.intToString(var_num);
-            buffer->emit("sub $sp, $sp, " + var_num_s);
+//        int var_num = parser->scope_var_num * 4;
+//        if (var_num > 0) {
+//            string var_num_s = utils.intToString(var_num);
+//            buffer->emit("sub $sp, $sp, " + var_num_s);
+//        }
+
+        Preconditions* preconditions = dynamic_cast<Preconditions*>(preconds);
+
+        if (preconditions->preconditions_num > 0) {
+
+            Register r = getFreeRegister();
+            for (int i = 0; i < preconditions->preconditions_num; ++i) {
+                Exp* exp = preconditions->preconditionExps[i];
+                boolAssignment(r.name, exp->type);
+                buffer->emit("beq $zero, " + r.name + " prcnd_" + name);
+            }
+            freeRegister(r.name);
         }
     }
 
@@ -74,11 +92,48 @@ private:
         buffer->emit("jr $ra");
     }
 
+    void emitPrecondCheck(string functionName) {
+        string label = "prcnd_" + functionName;
+        buffer->emitData(label + "_str" + ": .asciiz \"Precondition hasn't been satisfied for function " + functionName + "\"\n");
+
+        buffer->emit(label + ":");
+        buffer->emit("la $a0, " + label + "_str");
+        buffer->emit("li $v0, 4");
+        buffer->emit("syscall");
+        buffer->emit("j halt");
+    }
+
 public:
+    string current_while_label;
+
     explicit CodeGenerator(Parser* parser);
+
+    void procedureCalleeEndMain() {
+        buffer->emit("halt:");
+        buffer->emit("li $v0, 10");
+        buffer->emit("syscall");
+        buffer->emit(".end main");
+        buffer->emitData("msg: .asciiz  \"Error division by zero\\n\"");
+    }
 
     void procedureCalleeEnd() {
         buffer->emit("jr $ra");
+    }
+
+
+    Register getFreeRegister() {
+        RegisterPool& pool = registers.back();
+        return pool.getFreeRegister();
+    }
+
+    void freeRegister(const string& name) {
+        RegisterPool& pool = registers.back();
+        pool.freeRegister(name);
+    }
+
+    list<Register> getUsedRegisters() {
+        RegisterPool& pool = registers.back();
+        return pool.getUsedRegisters();
     }
 
     void function_call(Exp* funcExp, const stack_data* argumentsData){
@@ -94,10 +149,10 @@ public:
                 // arguments.push_back(utils.intToString(offset * 4) + "($fp)");
                 Type* type = arg->type;
                 if (type->type == BOOL) {
-                    Register reg = parser->getFreeRegister();
+                    Register reg = getFreeRegister();
                     boolAssignment(reg.name, type);
                     arguments.push_back(reg.name);
-                    parser->freeRegister(reg.name);
+                    freeRegister(reg.name);
                 } else {
                     arguments.push_back(arg->type->reg.name);
                 }
@@ -107,32 +162,35 @@ public:
             }
         }
 
-        // save_caller_registers();
+        save_caller_registers();
 
         // Save previous frame pointer
         push("$fp");
         // Save previous return address
         push("$ra");
 
+
         for (int i = 0; i < arguments.size(); ++i) {
             push(arguments[i]);
         }
 
+        if (arguments.size() > 0 )
+            buffer->emit("sub $fp, $sp, " + utils.intToString(4 * arguments.size()));
+
+        registers.push_back(RegisterPool());
+
         int real_var_size = 4 * arguments.size();
         string var_num_s = utils.intToString(real_var_size);
-        if (real_var_size > 0) {
-            buffer->emit("add $fp, $sp, " + var_num_s);
-        }
+//        if (real_var_size > 0) {
+//            buffer->emit("add $fp, $sp, " + var_num_s);
+//        }
 
         // Jump to procedure
         buffer->emit("jal " + funcExp->id->id);
 
-        int funcReturnType = parser->getFunctionReturnType(funcExp->id);
-        if (funcReturnType != VOID) {
-            funcExp->type->reg = parser->getFreeRegister();
-            mov(funcExp->type->reg.name, "$v0");
-            parser->freeRegister(funcExp->type->reg.name);
-        }
+        registers.pop_back();
+
+        buffer->emit("add $fp, $sp, " + utils.intToString(4 * arguments.size()));
 
         if (real_var_size > 0) {
             buffer->emit("add $sp, $sp, " + var_num_s);
@@ -143,19 +201,27 @@ public:
         // Restore frame pointer
         pop("$fp");
 
-        // restore_caller_registers();
+        restore_caller_registers();
+
+        int funcReturnType = parser->getFunctionReturnType(funcExp->id);
+        if (funcReturnType != VOID) {
+            funcExp->type->reg = getFreeRegister();
+            mov(funcExp->type->reg.name, "$v0");
+        }
     }
 
-    void newFunction(stack_data* funcIdData) {
+    void newFunction(stack_data* funcIdData, stack_data* preconds) {
         Id* funcId = dynamic_cast<Id*>(funcIdData);
         string id = funcId->id;
 
-        if (id == "main") {
-            id = START_FUN; // Wrap main function
+        if (dynamic_cast<Preconditions*>(preconds)->preconditions_num > 0)
+            emitPrecondCheck(id);
 
-        }
         buffer->emit(id + ":");
-        procedureCalleeStart();
+        if (id == "main") {
+            buffer->emit("move $fp, $sp");
+        }
+        procedureCalleeStart(id, preconds);
     }
 
     // void freeRegister(const string& name);
@@ -206,11 +272,17 @@ public:
 
     void doReturn(stack_data* retExp);
 
+    void doIf(stack_data* expData, stack_data *labelData) {
+        string after_if_label = buffer->genLabel();
+        string label_true = dynamic_cast<Label*>(labelData)->label;
+        Type* t = dynamic_cast<Exp*>(expData)->type;
+        buffer->bpatch(t->true_list, label_true);
+        buffer->bpatch(t->false_list, after_if_label);
+    }
+
     Type* doBreak();
 
     void doContinue();
-
-    void procedure();
 
     void emitZeroDivisionCheck(const string& src);
 

@@ -322,20 +322,20 @@ void Parser::outWhile() {
     in_while--;
 }
 
-Register Parser::getFreeRegister() {
-    Scope& topScope = scopes_tables.back();
-    return topScope.regPool.getFreeRegister();
-}
-
-void Parser::freeRegister(const string& name) {
-    Scope& topScope = scopes_tables.back();
-    return topScope.regPool.freeRegister(name);
-}
-
-list<Register> Parser::getUsedRegisters() {
-    Scope& topScope = scopes_tables.back();
-    return topScope.regPool.getUsedRegisters();
-}
+//Register Parser::getFreeRegister() {
+//    Scope& topScope = scopes_tables.back();
+//    return topScope.regPool.getFreeRegister();
+//}
+//
+//void Parser::freeRegister(const string& name) {
+//    Scope& topScope = scopes_tables.back();
+//    return topScope.regPool.freeRegister(name);
+//}
+//
+//list<Register> Parser::getUsedRegisters() {
+//    Scope& topScope = scopes_tables.back();
+//    return topScope.regPool.getUsedRegisters();
+//}
 
 Parser::Parser(Utils& utils) :
         utils(utils),

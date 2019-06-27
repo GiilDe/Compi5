@@ -40,26 +40,6 @@ struct func_data {
 
 };
 
-static const char* regNames[] = {
-        "$zero"
-        "$fp",
-        "$sp",
-        "$v0",
-        "$a0",
-        "$a3",
-        "$ra",
-};
-
-typedef enum SysReg {
-    ZERO,
-    FP,
-    SP,
-    V0,
-    A0,
-    A3,
-    RA,
-} SystemRegister;
-
 class RegisterPool {
 private:
     list<Register> registers;
@@ -217,12 +197,12 @@ public:
     void inWhile();
 
     void outWhile();
-
-    Register getFreeRegister();
-
-    void freeRegister(const string& name);
-
-    list<Register> getUsedRegisters();
+//
+//    Register getFreeRegister();
+//
+//    void freeRegister(const string& name);
+//
+//    list<Register> getUsedRegisters();
 };
 
 
