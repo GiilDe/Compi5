@@ -44,9 +44,18 @@ private:
                 push((*iter).name);
             }
         }
+        // Save previous frame pointer
+        push("$fp");
+        // Save previous return address
+        push("$ra");
     }
 
     void restore_caller_registers() {
+        // Restore return address
+        pop("$ra");
+        // Restore frame pointer
+        pop("$fp");
+
         list<Register> used = getUsedRegisters();
         // Restore in reverse order
         for (list<Register>::reverse_iterator iter = used.rbegin(); iter != used.rend(); ++iter) {
@@ -143,6 +152,9 @@ public:
     void function_call(Exp* funcExp, const stack_data* argumentsData){
         const ArgumentList* typesList = dynamic_cast<const ArgumentList*>(argumentsData);
         const vector<Exp*>& types = typesList->params;
+
+        save_caller_registers();
+
         vector<string> arguments;
 
         FOR_EACH_CONST(iter, vector<Exp*>, types) {
@@ -156,7 +168,8 @@ public:
                     Register reg = getFreeRegister();
                     boolAssignment(reg.name, type);
                     arguments.push_back(reg.name);
-                    freeRegister(reg.name);
+                    type->reg = reg;
+                    // freeRegister(reg.name);
                 } else {
                     arguments.push_back(arg->type->reg.name);
                 }
@@ -165,14 +178,6 @@ public:
                 arguments.push_back(utils.intToString(-offset * 4) + "($fp)");
             }
         }
-
-        save_caller_registers();
-
-        // Save previous frame pointer
-        push("$fp");
-        // Save previous return address
-        push("$ra");
-
 
         for (int i = arguments.size(); i > 0; --i) {
             push(arguments[i-1]);
@@ -207,15 +212,29 @@ public:
             buffer->emit("add $sp, $sp, " + var_num_s);
         }
 
-        // Restore return address
-        pop("$ra");
-        // Restore frame pointer
-        pop("$fp");
-
         restore_caller_registers();
 
         int funcReturnType = parser->getFunctionReturnType(funcExp->id);
-        if (funcReturnType != VOID) {
+        if (funcReturnType == BOOL) {
+            Id *id = funcExp->id;
+            string reg = "$v0";
+
+            Type* b = funcExp->type;
+            b->bool_exp = true;
+
+            vector<int> true_list;
+            vector<int> false_list;
+
+            true_list.push_back(buffer->emit("bgt " + reg + ", $zero, " + " "));
+            false_list.push_back(buffer->emit("j "));
+
+            //if (reg != b_->type->reg.name) {
+            //    freeRegister(reg);
+            //}
+
+            b->true_list = true_list;
+            b->false_list = false_list;
+        } else if (funcReturnType != VOID) {
             funcExp->type->reg = getFreeRegister();
             mov(funcExp->type->reg.name, "$v0");
         }

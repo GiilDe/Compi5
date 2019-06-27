@@ -230,7 +230,6 @@ Exp* CodeGenerator::boolFunc(stack_data* idData){
     //string reg = reg result of function is in
     Id *id = dynamic_cast<Id*>(idData);
     string reg = id->type.reg.name;
-    assignRegisterToID(id);
 
     Type* b = new Type(BOOL);
     b->bool_exp = true;
@@ -238,7 +237,7 @@ Exp* CodeGenerator::boolFunc(stack_data* idData){
     vector<int> true_list;
     vector<int> false_list;
     Register r = getFreeRegister();
-    if (isFromMemory(reg)) {
+    if (isFromMemory(reg) || reg == "") {
         mov(r.name, reg);
         reg = r.name;
     }

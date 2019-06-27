@@ -20,7 +20,6 @@ using namespace std;
 #define FOR_EACH_CONST(iter, ds, name) \
     for (ds::const_iterator iter = name.begin(); iter != name.end(); iter++)
 
-
 #define WRAP_ERROR(exp) \
     do { \
         exp; \

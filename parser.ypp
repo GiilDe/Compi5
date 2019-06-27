@@ -355,6 +355,7 @@ Simple_statement:  LBRACE { parser.newScope(false); } Statements RBRACE
                     wrapper.doAssignOp($3, $1, parser.getVariableType($1));
                 }
                 | Call SC
+                { $$ = $1; }
 
                 | RETURN SC
                 { wrapper.doReturn(NULL); }
@@ -379,12 +380,6 @@ Call	:	ID LPAREN ExpList RPAREN
                 parser.verifyRightParams($1, $3);
                 Exp* funcExp = new Exp(funcId, funcType);
                 wrapper.function_call(funcExp, $3);
-
-                /*if (parser.getFunctionReturnType(funcId) == BOOL) {
-                    $$ = wrapper.boolFunc(funcId);
-                } else {
-                    $$ = funcExp;
-                }*/
                 $$ = funcExp;
             }
 
@@ -397,7 +392,6 @@ Call	:	ID LPAREN ExpList RPAREN
                 parser.verifyRightParams($1, l);
                 Exp* funcExp = new Exp(funcId, funcType);
                 wrapper.function_call(funcExp, l);
-
                 $$ = funcExp;
 		    }
 	    ;
