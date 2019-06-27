@@ -486,7 +486,9 @@ Exp	:	LPAREN Exp RPAREN
     }
 
 	|	Call
-	{ $$ = $1; }
+	{
+	    $$ = wrapper.boolFunc($1);
+	}
 
 	|	NUM
 	{

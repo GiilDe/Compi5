@@ -1,6 +1,8 @@
+
 bool Func(int x) {
 	return x > 3;
 }
+
 void maxTestsTestAndOrWithFunc() {
 	bool x = Func(3) and true;
 	bool y = Func(5) or 5 < 4;

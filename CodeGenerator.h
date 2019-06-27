@@ -126,6 +126,8 @@ public:
         return pool.getFreeRegister();
     }
 
+    Exp* boolFunc(stack_data* idData);
+
     Exp* boolId(stack_data* bData);
 
     void freeRegister(const string& name) {

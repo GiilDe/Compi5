@@ -1,4 +1,4 @@
-void moo(bool cond) {
+ int moo(bool cond) {
  	if (cond)
  		return 4;
  	else
