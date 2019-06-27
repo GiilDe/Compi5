@@ -158,7 +158,7 @@ public:
                 }
             } else {
                 int offset = varData.second;
-                arguments.push_back(utils.intToString(offset * 4) + "($fp)");
+                arguments.push_back(utils.intToString(-offset * 4) + "($fp)");
             }
         }
 
@@ -170,17 +170,20 @@ public:
         push("$ra");
 
 
-        for (int i = 0; i < arguments.size(); ++i) {
-            push(arguments[i]);
+        for (int i = arguments.size(); i > 0; --i) {
+            push(arguments[i-1]);
         }
 
+//        if (arguments.size() > 0 )
+//            buffer->emit("sub $fp, $sp, " + utils.intToString(4 * arguments.size()));
+
+//        buffer->emit("sub $sp, $sp, 4");
         if (arguments.size() > 0 )
-            buffer->emit("sub $fp, $sp, " + utils.intToString(4 * arguments.size()));
+            buffer->emit("sub $fp, $sp, 4");
 
         registers.push_back(RegisterPool());
 
-        int real_var_size = 4 * arguments.size();
-        string var_num_s = utils.intToString(real_var_size);
+
 //        if (real_var_size > 0) {
 //            buffer->emit("add $fp, $sp, " + var_num_s);
 //        }
@@ -190,8 +193,12 @@ public:
 
         registers.pop_back();
 
-        buffer->emit("add $fp, $sp, " + utils.intToString(4 * arguments.size()));
+        // buffer->emit("add $fp, $sp, " + utils.intToString(4 * arguments.size()));
 
+//        buffer->emit("add $sp, $sp, 4");
+
+        int real_var_size = 4 * arguments.size();
+        string var_num_s = utils.intToString(real_var_size);
         if (real_var_size > 0) {
             buffer->emit("add $sp, $sp, " + var_num_s);
         }

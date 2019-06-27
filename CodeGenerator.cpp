@@ -276,7 +276,7 @@ Exp* CodeGenerator::assignRegisterToID(stack_data *idData) {
     if (p.first != -1) {
         id->type.type = p.first;
         // Align offset to 4 bytes
-        int offset = 4 * p.second;
+        int offset = -4 * p.second;
         id->type.reg = utils.intToString(offset) + "($fp)";
     }
 
@@ -316,7 +316,12 @@ void CodeGenerator::doAssignOp(stack_data *expTypeData, stack_data *idData, int 
             mov(dest, expType->type->reg.name);
         }
     } else {
-        boolAssignment(dest, expType->type);
+        if (expType == NULL) {
+            Exp *exp = new Exp(id, new Type(BOOL));
+            boolAssignment(dest, exp->type);
+        } else {
+            boolAssignment(dest, expType->type);
+        }
     }
 }
 
