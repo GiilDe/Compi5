@@ -481,6 +481,9 @@ Exp	:	LPAREN Exp RPAREN
         parser.verifyVariableDefined($1);
         Id* id = static_cast<Id*>($1);
         $$ = wrapper.assignRegisterToID($1);
+        if(parser.getVariableType($1) == BOOL){
+            $$ = wrapper.boolId($1);
+        }
     }
 
 	|	Call

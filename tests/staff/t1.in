@@ -1,3 +1,4 @@
+
 void printByValue(bool val) {
 	if (val)
 		print("val is true\n");

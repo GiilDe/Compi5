@@ -1,0 +1,10 @@
+void moo(bool cond) {
+ 	if (cond)
+ 		return 4;
+ 	else
+ 		return 3;
+ }
+
+ void main() {
+ 	int x = moo(true);
+ }

@@ -95,6 +95,7 @@ public:
     Id* id;
     Type* type;
 
+
     Exp(Type *type) : id(NULL), type(type) {}
     Exp(Id* id, Type* type) : id(id), type(type) {}
 };

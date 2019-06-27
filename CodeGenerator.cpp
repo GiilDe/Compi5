@@ -220,6 +220,30 @@ Exp* CodeGenerator::boolOr(stack_data* b1Data, stack_data* b2Data, stack_data* l
     return new Exp(b);
 }
 
+Exp* CodeGenerator::boolId(stack_data* idData){
+    assignRegisterToID(idData);
+    Id *id = dynamic_cast<Id*>(idData);
+    string reg = id->type.reg.name;
+
+    Type* b = new Type(BOOL);
+    b->bool_exp = true;
+
+    vector<int> true_list;
+    vector<int> false_list;
+
+    true_list.push_back(buffer->emit("bgt " + reg + "0" + " "));
+    false_list.push_back(buffer->emit("j "));
+
+    //if (reg != b_->type->reg.name) {
+    //    freeRegister(reg);
+    //}
+
+    b->true_list = true_list;
+    b->false_list = false_list;
+
+    return new Exp(b);
+}
+
 Exp* CodeGenerator::boolNot(stack_data* bData) {
     Type* b = new Type(BOOL);
 

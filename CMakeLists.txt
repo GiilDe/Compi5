@@ -10,7 +10,7 @@ FIND_PACKAGE(FLEX)
 BISON_TARGET(
         Parser # Just a name
         ${CMAKE_CURRENT_SOURCE_DIR}/parser.ypp ${CMAKE_CURRENT_SOURCE_DIR}/parser.tab.cpp # path to save output
-        COMPILE_FLAGS "-v"
+        COMPILE_FLAGS ""
 )
 
 FLEX_TARGET(
