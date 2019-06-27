@@ -221,7 +221,7 @@ Exp* CodeGenerator::boolOr(stack_data* b1Data, stack_data* b2Data, stack_data* l
 }
 
 Exp* CodeGenerator::boolId(stack_data* idData){
-    assignRegisterToID(idData);
+    // assignRegisterToID(idData);
     Id *id = dynamic_cast<Id*>(idData);
     string reg = id->type.reg.name;
 
@@ -230,9 +230,16 @@ Exp* CodeGenerator::boolId(stack_data* idData){
 
     vector<int> true_list;
     vector<int> false_list;
+    Register r = getFreeRegister();
+    if (isFromMemory(reg)) {
+        mov(r.name, reg);
+        reg = r.name;
+    }
 
-    true_list.push_back(buffer->emit("bgt " + reg + "0" + " "));
+    true_list.push_back(buffer->emit("bgt " + reg + ", $zero, " + " "));
     false_list.push_back(buffer->emit("j "));
+
+    // freeRegister(r.name);
 
     //if (reg != b_->type->reg.name) {
     //    freeRegister(reg);
@@ -415,17 +422,4 @@ void CodeGenerator::emitZeroDivisionCheck(const string& src) {
 
     buffer->emit(ndbzLabel + ":");
     zdiv_check_counter++;
-}
-
-void CodeGenerator::emitMain() {
-//    buffer->emit("main:");
-//    buffer->emit("move $fp, $sp");
-//
-//    buffer->emit("jal " + string(START_FUN));
-//
-//    buffer->emit("halt:");
-//    buffer->emit("li $v0, 10");
-//    buffer->emit("syscall");
-//    buffer->emit(".end main");
-//    buffer->emitData("msg: .asciiz  \"Error division by zero\\n\"");
 }

@@ -294,9 +294,6 @@ public:
     void doContinue();
 
     void emitZeroDivisionCheck(const string& src);
-
-    void emitMain();
-
 };
 
 

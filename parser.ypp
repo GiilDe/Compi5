@@ -94,7 +94,6 @@ Program	:	Funcs EF
         {
             parser.verifyMainFunction();
             parser.exitLastScope();
-            wrapper.emitMain();
             wrapper.printBuffer();
             exit(0);
         }
