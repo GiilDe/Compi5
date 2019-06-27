@@ -487,10 +487,12 @@ Exp	:	LPAREN Exp RPAREN
 
 	|	Call
 	{
-	    $$ = $1
-	    //if function is of type BOOL{
-	        //$$ = wrapper.boolFunc($1);
-	    //}
+	    Exp *exp = dynamic_cast<Exp*>($1);
+	    if (parser.getFunctionReturnType(exp->id) == BOOL) {
+	        $$ = wrapper.boolFunc($1);
+	    } else {
+            $$ = $1;
+	    }
 	}
 
 	|	NUM

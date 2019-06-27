@@ -223,6 +223,8 @@ Exp* CodeGenerator::boolOr(stack_data* b1Data, stack_data* b2Data, stack_data* l
 Exp* CodeGenerator::boolFunc(stack_data* idData){
 
     //string reg = reg result of function is in
+    Id *id = dynamic_cast<Id*>(idData);
+    string reg = id->type.reg.name;
 
     Type* b = new Type(BOOL);
     b->bool_exp = true;
