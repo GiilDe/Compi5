@@ -36,33 +36,6 @@ private:
 
     int str_count;
 
-    void save_caller_registers() {
-        if (registers.size() > 0) {
-            RegisterPool& pool = registers.back();
-            list<Register> used = pool.getUsedRegisters();
-            for (list<Register>::iterator iter = used.begin(); iter != used.end(); ++iter) {
-                push((*iter).name);
-            }
-        }
-        // Save previous frame pointer
-        push("$fp");
-        // Save previous return address
-        push("$ra");
-    }
-
-    void restore_caller_registers() {
-        // Restore return address
-        pop("$ra");
-        // Restore frame pointer
-        pop("$fp");
-
-        list<Register> used = getUsedRegisters();
-        // Restore in reverse order
-        for (list<Register>::reverse_iterator iter = used.rbegin(); iter != used.rend(); ++iter) {
-            pop((*iter).name);
-        }
-    }
-
     void procedureCalleeStart(string name, stack_data* preconds) {
         // Backup
 //        int var_num = parser->scope_var_num * 4;
@@ -149,60 +122,100 @@ public:
         return pool.getUsedRegisters();
     }
 
-    void push_argument(stack_data* arg){
-        Exp* argument = dynamic_cast<Exp*>(arg);
-        Type* type = armu->type;
-        if (type->type == BOOL) {
-            Register reg = getFreeRegister();
-            boolAssignment(reg.name, type);
-            arguments.push_back(reg.name);
-            type->reg = reg;
-            // freeRegister(reg.name);
-        } else {
-            arguments.push_back(arg->type->reg.name);
+    void save_caller_registers() {
+        if (registers.size() > 0) {
+            RegisterPool& pool = registers.back();
+            list<Register> used = pool.getUsedRegisters();
+            for (list<Register>::iterator iter = used.begin(); iter != used.end(); ++iter) {
+                push((*iter).name);
+            }
         }
+        // Save previous frame pointer
+        push("$fp");
+        // Save previous return address
+        push("$ra");
+    }
+
+    void restore_caller_registers() {
+        // Restore return address
+        pop("$ra");
+        // Restore frame pointer
+        pop("$fp");
+
+        list<Register> used = getUsedRegisters();
+        // Restore in reverse order
+        for (list<Register>::reverse_iterator iter = used.rbegin(); iter != used.rend(); ++iter) {
+            pop((*iter).name);
+        }
+    }
+
+    ArgumentList* push_argument(stack_data* argData, stack_data* expListData){
+        Exp* arg = dynamic_cast<Exp*>(argData);
+        ArgumentList* expList = dynamic_cast<ArgumentList*>(expListData);
+        if (expList == NULL) {
+            expList = new ArgumentList();
+        }
+
+        pair<int, int> varData = parser->getVariable(arg ? arg->id : NULL);
+        if (varData.first == -1) {
+            // Not a variable, so probably an expression
+            // arguments.push_back(utils.intToString(offset * 4) + "($fp)");
+            Type* type = arg->type;
+            if (type->type == BOOL) {
+                Register reg = getFreeRegister();
+                boolAssignment(reg.name, type);
+                expList->addArgument(reg.name);
+                type->reg = reg;
+                // freeRegister(reg.name);
+            } else {
+                expList->addArgument(arg->type->reg.name);
+            }
+        } else {
+            int offset = varData.second;
+            expList->addArgument(utils.intToString(-offset * 4) + "($fp)");
+        }
+        push(expList->arguments.back());
+        return expList;
     }
 
     void function_call(Exp* funcExp, const stack_data* argumentsData){
         const ArgumentList* typesList = dynamic_cast<const ArgumentList*>(argumentsData);
         const vector<Exp*>& types = typesList->params;
 
-        save_caller_registers();
+        vector<string> arguments = typesList->arguments;
 
-        vector<string> arguments;
+//        FOR_EACH_CONST(iter, vector<Exp*>, types) {
+//            const Exp* arg = *iter;
+//            pair<int, int> varData = parser->getVariable(arg ? arg->id : NULL);
+//            if (varData.first == -1) {
+//                // Not a variable, so probably an expression
+//                // arguments.push_back(utils.intToString(offset * 4) + "($fp)");
+//                Type* type = arg->type;
+//                if (type->type == BOOL) {
+//                    Register reg = getFreeRegister();
+//                    boolAssignment(reg.name, type);
+//                    arguments.push_back(reg.name);
+//                    type->reg = reg;
+//                    // freeRegister(reg.name);
+//                } else {
+//                    arguments.push_back(arg->type->reg.name);
+//                }
+//            } else {
+//                int offset = varData.second;
+//                arguments.push_back(utils.intToString(-offset * 4) + "($fp)");
+//            }
+//        }
 
-        FOR_EACH_CONST(iter, vector<Exp*>, types) {
-            const Exp* arg = *iter;
-            pair<int, int> varData = parser->getVariable(arg ? arg->id : NULL);
-            if (varData.first == -1) {
-                // Not a variable, so probably an expression
-                // arguments.push_back(utils.intToString(offset * 4) + "($fp)");
-                Type* type = arg->type;
-                if (type->type == BOOL) {
-                    Register reg = getFreeRegister();
-                    boolAssignment(reg.name, type);
-                    arguments.push_back(reg.name);
-                    type->reg = reg;
-                    // freeRegister(reg.name);
-                } else {
-                    arguments.push_back(arg->type->reg.name);
-                }
-            } else {
-                int offset = varData.second;
-                arguments.push_back(utils.intToString(-offset * 4) + "($fp)");
-            }
-        }
-
-        for (int i = arguments.size(); i > 0; --i) {
-            push(arguments[i-1]);
-        }
+//        for (int i = arguments.size(); i > 0; --i) {
+//            push(arguments[i-1]);
+//        }
 
 //        if (arguments.size() > 0 )
 //            buffer->emit("sub $fp, $sp, " + utils.intToString(4 * arguments.size()));
 
 //        buffer->emit("sub $sp, $sp, 4");
-        if (arguments.size() > 0 )
-            buffer->emit("sub $fp, $sp, 4");
+//        if (arguments.size() > 0 )
+//            buffer->emit("sub $fp, $sp, 4");
 
         registers.push_back(RegisterPool());
 

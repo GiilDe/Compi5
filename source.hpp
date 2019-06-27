@@ -103,8 +103,24 @@ public:
 class ArgumentList : public stack_data {
 public:
     vector<Exp*> params;
+    vector<string> arguments;
     ArgumentList() : params(){}
-    explicit ArgumentList(const vector<Exp*>& vector) : params(vector){}
+    explicit ArgumentList(const vector<Exp*>& vector) : params(vector) {}
+
+    void addArgument(const string& arg) {
+        arguments.push_back(arg);
+    }
+};
+
+class ExpList: public stack_data {
+public:
+    vector<string> arguments;
+
+    ExpList(): arguments() {}
+
+    void addArgument(const string& arg) {
+         arguments.push_back(arg);
+    }
 };
 
 class Preconditions : public stack_data{
